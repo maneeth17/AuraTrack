@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, varchar, primaryKey } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, varchar, primaryKey, unique } from 'drizzle-orm/pg-core';
 
 export const habits = pgTable('habits', {
   id: varchar('id', { length: 255 }).primaryKey(),
@@ -21,6 +21,6 @@ export const logs = pgTable('logs', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => {
   return {
-    pk: primaryKey({ columns: [table.habitId, table.date] }),
+    uniqueHabitDate: unique('unique_habit_date').on(table.habitId, table.date),
   };
 });
