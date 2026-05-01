@@ -1,0 +1,142 @@
+'use client';
+
+import { useRef, useState } from 'react';
+import { Download, Upload, Trash2, Info } from 'lucide-react';
+import { useHabitStore } from '@/store/useHabitStore';
+
+export function SettingsView() {
+  const exportData = useHabitStore((s) => s.exportData);
+  const importData = useHabitStore((s) => s.importData);
+  const resetAll = useHabitStore((s) => s.resetAll);
+  const habits = useHabitStore((s) => s.habits);
+  const logs = useHabitStore((s) => s.logs);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  const handleExport = () => {
+    const data = exportData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `auratrack-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+        if (data.habits && data.logs) {
+          importData(data);
+          setImportStatus('success');
+          setTimeout(() => setImportStatus('idle'), 3000);
+        } else {
+          setImportStatus('error');
+          setTimeout(() => setImportStatus('idle'), 3000);
+        }
+      } catch {
+        setImportStatus('error');
+        setTimeout(() => setImportStatus('idle'), 3000);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleReset = () => {
+    if (window.confirm('Are you sure you want to delete all data? This cannot be undone.')) {
+      resetAll();
+    }
+  };
+
+  return (
+    <div className="space-y-6 pb-8 lg:pb-4">
+      <h2 className="text-2xl font-bold text-white">Settings</h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bento-card">
+          <h3 className="text-sm font-semibold text-white/80 mb-4">Data Management</h3>
+          <div className="space-y-3">
+            <button
+              onClick={handleExport}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/8 transition-all text-left"
+            >
+              <Download className="w-5 h-5 text-accent shrink-0" />
+              <div>
+                <p className="text-sm text-white/80 font-medium">Export Data</p>
+                <p className="text-xs text-white/40">Download JSON backup</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/8 transition-all text-left"
+            >
+              <Upload className="w-5 h-5 text-success shrink-0" />
+              <div>
+                <p className="text-sm text-white/80 font-medium">Import Data</p>
+                <p className="text-xs text-white/40">Restore from JSON</p>
+              </div>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleImport}
+              className="hidden"
+            />
+
+            {importStatus === 'success' && (
+              <p className="text-xs text-success text-center py-2">Data imported successfully!</p>
+            )}
+            {importStatus === 'error' && (
+              <p className="text-xs text-danger text-center py-2">Invalid backup file</p>
+            )}
+
+            <button
+              onClick={handleReset}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-danger/10 border border-danger/20 hover:bg-danger/20 transition-all text-left"
+            >
+              <Trash2 className="w-5 h-5 text-danger shrink-0" />
+              <div>
+                <p className="text-sm text-danger font-medium">Reset All Data</p>
+                <p className="text-xs text-white/40">Delete all habits and logs</p>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div className="bento-card">
+          <h3 className="text-sm font-semibold text-white/80 mb-4">About</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between py-2 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <Info className="w-4 h-4 text-white/30" />
+                <span className="text-sm text-white/50">Version</span>
+              </div>
+              <span className="text-sm text-white/30 font-mono">1.0.0</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <Info className="w-4 h-4 text-white/30" />
+                <span className="text-sm text-white/50">Habits</span>
+              </div>
+              <span className="text-sm text-white/30 font-mono">{habits.length}</span>
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-2">
+                <Info className="w-4 h-4 text-white/30" />
+                <span className="text-sm text-white/50">Total Logs</span>
+              </div>
+              <span className="text-sm text-white/30 font-mono">{logs.length}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

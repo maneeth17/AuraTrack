@@ -3,25 +3,74 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #020617;
+  --foreground: #f8fafc;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Inter, system-ui, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+  .glass {
+    @apply backdrop-blur-md bg-white/5 border border-white/10;
+  }
+  .glass-hover {
+    @apply hover:bg-white/10 hover:border-white/15 transition-all duration-200;
+  }
+  .glow-accent {
+    @apply shadow-glow;
+  }
+  .glow-success {
+    @apply shadow-glow-success;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+@layer components {
+  .bento-card {
+    @apply glass rounded-2xl p-4 glass-hover;
+  }
+  .btn-primary {
+    @apply bg-accent/20 text-accent border border-accent/30 rounded-xl px-4 py-2.5 
+           font-medium transition-all duration-200 active:scale-95 hover:bg-accent/30 hover:shadow-glow;
+  }
+  .btn-danger {
+    @apply bg-danger/20 text-danger border border-danger/30 rounded-xl px-4 py-2.5 
+             font-medium transition-all duration-200 active:scale-95 hover:bg-danger/30;
+  }
+  .fab-glow {
+    @apply animate-glow-pulse shadow-glow-lg;
   }
 }
