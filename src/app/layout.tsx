@@ -4,8 +4,6 @@ import "./globals.css";
 import { ServiceWorkerRegistration } from "@/components/common/ServiceWorkerRegistration";
 import { PWAInstallPrompt } from "@/components/common/PWAInstallPrompt";
 
-export const dynamic = 'force-dynamic';
-
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
