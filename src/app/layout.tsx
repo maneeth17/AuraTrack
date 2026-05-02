@@ -3,7 +3,6 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { ServiceWorkerRegistration } from "@/components/common/ServiceWorkerRegistration";
 import { PWAInstallPrompt } from "@/components/common/PWAInstallPrompt";
-import { AuthProvider } from "@/components/common/AuthProvider";
 
 export const dynamic = 'force-dynamic';
 
@@ -57,11 +56,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          {children}
-          <ServiceWorkerRegistration />
-          <PWAInstallPrompt />
-        </AuthProvider>
+        {children}
+        <ServiceWorkerRegistration />
+        <PWAInstallPrompt />
       </body>
     </html>
   );
