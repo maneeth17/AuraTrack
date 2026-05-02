@@ -1,7 +1,8 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { Home, BarChart3, Settings, Plus } from 'lucide-react';
+import { memo } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Home, BarChart3, Settings, Plus, Zap } from 'lucide-react';
 
 interface BottomNavBarProps {
   activeTab: string;
@@ -9,12 +10,16 @@ interface BottomNavBarProps {
   onFabPress: () => void;
 }
 
-export function BottomNavBar({ activeTab, onTabChange, onFabPress }: BottomNavBarProps) {
-  const tabs = [
-    { id: 'home', icon: Home, label: 'Home' },
-    { id: 'stats', icon: BarChart3, label: 'Stats' },
-    { id: 'settings', icon: Settings, label: 'Settings' },
-  ];
+const tabs = [
+  { id: 'home', icon: Home, label: 'Home' },
+  { id: 'stats', icon: BarChart3, label: 'Stats' },
+  { id: 'lab', icon: Zap, label: 'Lab' },
+  { id: 'settings', icon: Settings, label: 'Settings' },
+];
+
+export const BottomNavBar = memo(function BottomNavBar({ activeTab, onTabChange, onFabPress }: BottomNavBarProps) {
+  const shouldReduceMotion = useReducedMotion();
+  const springConfig = shouldReduceMotion ? { duration: 0.1 } : { type: 'spring' as const, stiffness: 400, damping: 30 };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 safe-bottom">
@@ -35,7 +40,7 @@ export function BottomNavBar({ activeTab, onTabChange, onFabPress }: BottomNavBa
                   <motion.div
                     layoutId="activeTab"
                     className="absolute inset-0 bg-accent/10 rounded-xl"
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    transition={springConfig}
                   />
                 )}
                 <Icon className="w-5 h-5 relative z-10" />
@@ -46,8 +51,8 @@ export function BottomNavBar({ activeTab, onTabChange, onFabPress }: BottomNavBa
 
           <div className="absolute -top-6 left-1/2 -translate-x-1/2">
             <motion.button
-              whileTap={{ scale: 0.9 }}
-              whileHover={{ scale: 1.05 }}
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.9 }}
+              whileHover={shouldReduceMotion ? undefined : { scale: 1.05 }}
               onClick={onFabPress}
               className="w-14 h-14 rounded-full bg-accent flex items-center justify-center shadow-glow-lg fab-glow"
             >
@@ -58,4 +63,4 @@ export function BottomNavBar({ activeTab, onTabChange, onFabPress }: BottomNavBa
       </div>
     </div>
   );
-}
+});

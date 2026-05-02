@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { habits } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import { auth } from '@/auth';
 
 export async function GET() {
   try {
     if (!db) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
     }
-    const allHabits = await db.select().from(habits).orderBy(habits.createdAt);
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const allHabits = await db.select().from(habits).where(eq(habits.userId, session.user.id)).orderBy(habits.createdAt);
     return NextResponse.json({ habits: allHabits });
   } catch {
     return NextResponse.json({ error: 'Failed to fetch habits' }, { status: 500 });
@@ -20,9 +26,15 @@ export async function POST(request: NextRequest) {
     if (!db) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
     }
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const newHabit = await db.insert(habits).values({
       id: body.id,
+      userId: session.user.id,
       title: body.title,
       description: body.description || '',
       category: body.category,
@@ -43,17 +55,23 @@ export async function PUT(request: NextRequest) {
     if (!db) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
     }
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { id, ...updates } = body;
+
+    const existing = await db.select().from(habits).where(and(eq(habits.id, id), eq(habits.userId, session.user.id)));
+    if (!existing.length) {
+      return NextResponse.json({ error: 'Habit not found' }, { status: 404 });
+    }
 
     const updated = await db.update(habits)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(habits.id, id))
       .returning();
-
-    if (!updated.length) {
-      return NextResponse.json({ error: 'Habit not found' }, { status: 404 });
-    }
 
     return NextResponse.json({ habit: updated[0] });
   } catch {
@@ -66,6 +84,11 @@ export async function DELETE(request: NextRequest) {
     if (!db) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
     }
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -73,7 +96,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Missing habit id' }, { status: 400 });
     }
 
-    await db.delete(habits).where(eq(habits.id, id));
+    await db.delete(habits).where(and(eq(habits.id, id), eq(habits.userId, session.user.id)));
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Failed to delete habit' }, { status: 500 });

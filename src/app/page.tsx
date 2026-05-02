@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import nextDynamic from 'next/dynamic';
 import { HomeView } from '@/components/dashboard/HomeView';
-import { StatsView } from '@/components/analytics/StatsView';
-import { SettingsView } from '@/components/common/SettingsView';
 import { BottomNavBar } from '@/components/layout/BottomNavBar';
 import { AddHabitSheet } from '@/components/common/AddHabitSheet';
 import { DesktopSidebar } from '@/components/layout/DesktopSidebar';
@@ -12,6 +11,47 @@ import { HabitDetailSheet } from '@/components/dashboard/SwipeableHabitCard';
 import { useHabitStore } from '@/store/useHabitStore';
 import { useHabitsForDate } from '@/hooks/useHabits';
 import { Habit, HabitWithStreak } from '@/types';
+
+export const dynamic = 'force-dynamic';
+
+const StatsView = nextDynamic(() => import('@/components/analytics/StatsView').then((m) => ({ default: m.StatsView })), {
+  ssr: false,
+  loading: () => (
+    <div className="space-y-6 pb-8 lg:pb-4">
+      <div className="h-8 w-32 bg-white/5 rounded-lg animate-pulse" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="h-40 bg-white/5 rounded-2xl animate-pulse" />
+        <div className="h-40 bg-white/5 rounded-2xl animate-pulse" />
+      </div>
+    </div>
+  ),
+});
+
+const SettingsView = nextDynamic(() => import('@/components/common/SettingsView').then((m) => ({ default: m.SettingsView })), {
+  ssr: false,
+  loading: () => (
+    <div className="space-y-6 pb-8 lg:pb-4">
+      <div className="h-8 w-32 bg-white/5 rounded-lg animate-pulse" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="h-48 bg-white/5 rounded-2xl animate-pulse" />
+        <div className="h-48 bg-white/5 rounded-2xl animate-pulse" />
+      </div>
+    </div>
+  ),
+});
+
+const LabView = nextDynamic(() => import('@/components/analytics/LabView').then((m) => ({ default: m.LabView })), {
+  ssr: false,
+  loading: () => (
+    <div className="space-y-6 pb-8 lg:pb-4">
+      <div className="h-8 w-32 bg-white/5 rounded-lg animate-pulse" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="h-40 bg-white/5 rounded-2xl animate-pulse" />
+        <div className="h-40 bg-white/5 rounded-2xl animate-pulse" />
+      </div>
+    </div>
+  ),
+});
 
 function DashboardContent() {
   const [activeTab, setActiveTab] = useState('home');
@@ -22,7 +62,12 @@ function DashboardContent() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const selectedDate = useHabitStore((s) => s.selectedDate);
+  const setSelectedDate = useHabitStore((s) => s.setSelectedDate);
   const habitsWithStreak = useHabitsForDate(selectedDate);
+
+  useEffect(() => {
+    setSelectedDate(new Date().toISOString().split('T')[0]);
+  }, [setSelectedDate]);
 
   useEffect(() => {
     const handleOpenAddHabit = () => {
@@ -42,12 +87,6 @@ function DashboardContent() {
       window.removeEventListener('delete-habit', handleDeleteHabit);
     };
   }, []);
-
-  const setSelectedDate = useHabitStore((s) => s.setSelectedDate);
-
-  useEffect(() => {
-    setSelectedDate(new Date().toISOString().split('T')[0]);
-  }, [setSelectedDate]);
 
   const handleFabPress = () => {
     setEditingHabit(null);
@@ -70,6 +109,8 @@ function DashboardContent() {
         return <HomeView onOpenSuggestions={() => setIsSuggestionsOpen(true)} onOpenDetail={handleOpenDetail} />;
       case 'stats':
         return <StatsView />;
+      case 'lab':
+        return <LabView />;
       case 'settings':
         return <SettingsView />;
       default:

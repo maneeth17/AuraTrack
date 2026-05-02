@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { Home, BarChart3, Settings, Plus, Zap } from 'lucide-react';
 
 interface DesktopSidebarProps {
@@ -8,13 +9,13 @@ interface DesktopSidebarProps {
   onAddHabit: () => void;
 }
 
-export function DesktopSidebar({ activeTab, onTabChange, onAddHabit }: DesktopSidebarProps) {
-  const tabs = [
-    { id: 'home', icon: Home, label: 'Dashboard' },
-    { id: 'stats', icon: BarChart3, label: 'Analytics' },
-    { id: 'settings', icon: Settings, label: 'Settings' },
-  ];
+const tabs = [
+  { id: 'home', icon: Home, label: 'Dashboard' },
+  { id: 'stats', icon: BarChart3, label: 'Analytics' },
+  { id: 'settings', icon: Settings, label: 'Settings' },
+];
 
+export const DesktopSidebar = memo(function DesktopSidebar({ activeTab, onTabChange, onAddHabit }: DesktopSidebarProps) {
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-72 bg-surface/50 border-r border-white/5 backdrop-blur-xl flex-col p-6 z-40">
       <div className="flex items-center gap-3 mb-10">
@@ -59,4 +60,4 @@ export function DesktopSidebar({ activeTab, onTabChange, onAddHabit }: DesktopSi
       </div>
     </aside>
   );
-}
+});

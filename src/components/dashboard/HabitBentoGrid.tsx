@@ -1,10 +1,11 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useCallback, useRef, useEffect } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useHabitsForDate, useTodayCompletion } from '@/hooks/useHabits';
 import { SwipeableHabitCard } from './SwipeableHabitCard';
 import { HabitWithStreak } from '@/types';
+import { hapticVibrate } from '@/lib/haptics';
 
 interface HabitBentoGridProps {
   date: string;
@@ -15,6 +16,7 @@ export function HabitBentoGrid({ date, onOpenDetail }: HabitBentoGridProps) {
   const habits = useHabitsForDate(date);
   const completion = useTodayCompletion(date);
   const hasTriggeredRef = useRef(false);
+  const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (habits.length > 0 && completion.percentage >= 100) {
@@ -26,6 +28,10 @@ export function HabitBentoGrid({ date, onOpenDetail }: HabitBentoGridProps) {
       hasTriggeredRef.current = false;
     }
   }, [completion.percentage, habits.length]);
+
+  const handleComplete = useCallback(() => {
+    hapticVibrate([10], 'habit-complete');
+  }, []);
 
   if (habits.length === 0) {
     return (
@@ -41,6 +47,8 @@ export function HabitBentoGrid({ date, onOpenDetail }: HabitBentoGridProps) {
     );
   }
 
+  const springConfig = shouldReduceMotion ? { duration: 0.1 } : { type: 'spring' as const, stiffness: 400, damping: 30 };
+
   return (
     <div className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
       <AnimatePresence mode="popLayout">
@@ -48,15 +56,16 @@ export function HabitBentoGrid({ date, onOpenDetail }: HabitBentoGridProps) {
           <motion.div
             key={habit.id}
             layout
-            initial={{ opacity: 0, y: 20 }}
+            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
+            transition={springConfig}
           >
             <SwipeableHabitCard
               habit={habit}
               date={date}
               onOpenDetail={onOpenDetail}
+              onComplete={handleComplete}
             />
           </motion.div>
         ))}
@@ -66,9 +75,7 @@ export function HabitBentoGrid({ date, onOpenDetail }: HabitBentoGridProps) {
 }
 
 async function triggerConfetti() {
-  if (typeof navigator !== 'undefined' && navigator.vibrate) {
-    navigator.vibrate([50, 30, 50]);
-  }
+  hapticVibrate([50, 30, 50], 'confetti');
 
   try {
     const confettiModule = await import('canvas-confetti');

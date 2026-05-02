@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { Download, Upload, Trash2, Info } from 'lucide-react';
+import { useRef, useState, useCallback, useEffect } from 'react';
+import { Download, Upload, Trash2, Info, LogOut, Share2, Copy, Check } from 'lucide-react';
 import { useHabitStore } from '@/store/useHabitStore';
+import { signOut } from 'next-auth/react';
 
 export function SettingsView() {
   const exportData = useHabitStore((s) => s.exportData);
@@ -12,6 +13,14 @@ export function SettingsView() {
   const logs = useHabitStore((s) => s.logs);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [shareId, setShareId] = useState<string | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [origin, setOrigin] = useState('');
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   const handleExport = () => {
     const data = exportData();
@@ -52,6 +61,28 @@ export function SettingsView() {
       resetAll();
     }
   };
+
+  const handleGenerateShare = useCallback(async () => {
+    setShareLoading(true);
+    try {
+      const res = await fetch('/api/share', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setShareId(data.shareId);
+      }
+    } catch {
+      // ignore
+    }
+    setShareLoading(false);
+  }, []);
+
+  const handleCopyShareLink = useCallback(() => {
+    if (!shareId) return;
+    const url = `${window.location.origin}/share/${shareId}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [shareId]);
 
   return (
     <div className="space-y-6 pb-8 lg:pb-4">
@@ -111,6 +142,53 @@ export function SettingsView() {
         </div>
 
         <div className="bento-card">
+          <h3 className="text-sm font-semibold text-white/80 mb-4">Share Progress</h3>
+          <div className="space-y-3">
+            {!shareId ? (
+              <button
+                onClick={handleGenerateShare}
+                disabled={shareLoading}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-accent/10 border border-accent/20 hover:bg-accent/20 transition-all text-left disabled:opacity-50"
+              >
+                <Share2 className="w-5 h-5 text-accent shrink-0" />
+                <div>
+                  <p className="text-sm text-white/80 font-medium">{shareLoading ? 'Generating...' : 'Create Share Link'}</p>
+                  <p className="text-xs text-white/40">Share your habits publicly</p>
+                </div>
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <button
+                  onClick={handleCopyShareLink}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-accent/10 border border-accent/20 hover:bg-accent/20 transition-all text-left"
+                >
+                  {copied ? (
+                    <Check className="w-5 h-5 text-success shrink-0" />
+                  ) : (
+                    <Copy className="w-5 h-5 text-accent shrink-0" />
+                  )}
+                  <div>
+                    <p className="text-sm text-white/80 font-medium">{copied ? 'Copied!' : 'Copy Link'}</p>
+                    <p className="text-xs text-white/40 truncate">{origin}/share/{shareId}</p>
+                  </div>
+                </button>
+                <button
+                  onClick={handleGenerateShare}
+                  disabled={shareLoading}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/8 transition-all text-left disabled:opacity-50"
+                >
+                  <Share2 className="w-5 h-5 text-white/40 shrink-0" />
+                  <div>
+                    <p className="text-sm text-white/80 font-medium">{shareLoading ? 'Refreshing...' : 'Regenerate Link'}</p>
+                    <p className="text-xs text-white/40">Create a new share ID</p>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="bento-card">
           <h3 className="text-sm font-semibold text-white/80 mb-4">About</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between py-2 border-b border-white/5">
@@ -136,6 +214,22 @@ export function SettingsView() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="bento-card">
+        <button
+          onClick={() => {
+            useHabitStore.getState().resetAll();
+            signOut({ callbackUrl: '/login' });
+          }}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-danger/10 border border-danger/20 hover:bg-danger/20 transition-all"
+        >
+          <LogOut className="w-5 h-5 text-danger shrink-0" />
+          <div className="text-left">
+            <p className="text-sm text-danger font-medium">Sign Out</p>
+            <p className="text-xs text-white/40">Clear local data and sign out</p>
+          </div>
+        </button>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Heart, Zap, Brain, Dumbbell, BookOpen, Users, Sun, Moon, Droplets, Coffee, Target, Trophy, Music, Camera, Smile, Star, Shield, Flame } from 'lucide-react';
+import { X, Check, Heart, Zap, Brain, Dumbbell, BookOpen, Users, Sun, Moon, Droplets, Coffee, Target, Trophy, Music, Camera, Smile, Star, Shield, Flame, Timer } from 'lucide-react';
 import { useHabitStore } from '@/store/useHabitStore';
 import { CATEGORIES, HABIT_ICONS, HABIT_COLORS } from '@/lib/streak';
 import { Habit } from '@/types';
@@ -44,6 +44,7 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
   const [frequency, setFrequency] = useState<'daily' | 'weekly'>('daily');
   const [color, setColor] = useState(HABIT_COLORS[0]);
   const [icon, setIcon] = useState(HABIT_ICONS[0]);
+  const [isFocusHabit, setIsFocusHabit] = useState(false);
 
   useEffect(() => {
     if (editHabit) {
@@ -53,6 +54,7 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
       setFrequency(editHabit.frequency);
       setColor(editHabit.color);
       setIcon(editHabit.icon);
+      setIsFocusHabit(editHabit.isFocusHabit || false);
     } else {
       setTitle('');
       setDescription('');
@@ -60,6 +62,7 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
       setFrequency('daily');
       setColor(HABIT_COLORS[0]);
       setIcon(HABIT_ICONS[0]);
+      setIsFocusHabit(false);
     }
   }, [editHabit, isOpen]);
 
@@ -67,9 +70,9 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
     if (!title.trim()) return;
 
     if (editHabit) {
-      updateHabit(editHabit.id, { title, description, category, frequency, color, icon });
+      updateHabit(editHabit.id, { title, description, category, frequency, color, icon, isFocusHabit });
     } else {
-      addHabit({ title, description, category, frequency, days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'], color, icon });
+      addHabit({ title, description, category, frequency, days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'], color, icon, isFocusHabit });
     }
     onClose();
   };
@@ -164,6 +167,25 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
                       </button>
                     ))}
                   </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 block">Focus Habit</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsFocusHabit(!isFocusHabit)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                      isFocusHabit
+                        ? 'border-accent/30 bg-accent/10'
+                        : 'border-white/10 bg-white/5'
+                    }`}
+                  >
+                    <Timer className={`w-5 h-5 ${isFocusHabit ? 'text-accent' : 'text-white/30'}`} />
+                    <div className="text-left">
+                      <p className={`text-sm font-medium ${isFocusHabit ? 'text-accent' : 'text-white/60'}`}>Enable Pomodoro Timer</p>
+                      <p className="text-xs text-white/30">Complete a 25-min session to check off</p>
+                    </div>
+                  </button>
                 </div>
 
                 <div>

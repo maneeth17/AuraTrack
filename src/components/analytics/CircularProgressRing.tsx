@@ -1,5 +1,7 @@
 'use client';
 
+import { memo } from 'react';
+
 interface CircularProgressProps {
   percentage: number;
   size?: number;
@@ -9,7 +11,7 @@ interface CircularProgressProps {
   sublabel?: string;
 }
 
-export function CircularProgressRing({
+export const CircularProgressRing = memo(function CircularProgressRing({
   percentage,
   size = 120,
   strokeWidth = 8,
@@ -24,7 +26,7 @@ export function CircularProgressRing({
   return (
     <div className="flex flex-col items-center">
       <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="-rotate-90">
+        <svg width={size} height={size} className="-rotate-90" style={{ willChange: 'stroke-dashoffset' }}>
           <circle
             cx={size / 2}
             cy={size / 2}
@@ -44,7 +46,7 @@ export function CircularProgressRing({
             strokeDashoffset={offset}
             strokeLinecap="round"
             className="transition-all duration-700 ease-out"
-            style={{ filter: `drop-shadow(0 0 6px ${color}40)` }}
+            style={{ filter: `drop-shadow(0 0 6px ${color}40)`, willChange: 'stroke-dashoffset' }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -55,9 +57,9 @@ export function CircularProgressRing({
       {sublabel && <span className="text-[0.65rem] text-white/30">{sublabel}</span>}
     </div>
   );
-}
+});
 
-export function MiniProgressRing({
+export const MiniProgressRing = memo(function MiniProgressRing({
   percentage,
   size = 40,
   strokeWidth = 4,
@@ -68,7 +70,7 @@ export function MiniProgressRing({
   const offset = circumference - (percentage / 100) * circumference;
 
   return (
-    <svg width={size} height={size} className="-rotate-90">
+    <svg width={size} height={size} className="-rotate-90" style={{ willChange: 'stroke-dashoffset' }}>
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -91,4 +93,4 @@ export function MiniProgressRing({
       />
     </svg>
   );
-}
+});

@@ -18,6 +18,21 @@ export function useHabitsForDate(date: string): HabitWithStreak[] {
   }, [habits, logs, date]);
 }
 
+export function useHabitById(id: string, date: string): HabitWithStreak | undefined {
+  const habits = useHabitStore((s) => s.habits);
+  const logs = useHabitStore((s) => s.logs);
+
+  return useMemo(() => {
+    const habit = habits.find((h) => h.id === id);
+    if (!habit) return undefined;
+    return {
+      ...habit,
+      streak: calculateStreak(logs, habit.id),
+      todayStatus: getTodayStatus(logs, habit.id, date),
+    };
+  }, [habits, logs, id, date]);
+}
+
 export function useTodayCompletion(date: string) {
   const habits = useHabitStore((s) => s.habits);
   const logs = useHabitStore((s) => s.logs);
@@ -68,4 +83,12 @@ export function useWeeklyMomentum() {
 
     return Math.round((completed / totalPossible) * 100);
   }, [habits, logs]);
+}
+
+export function useHabitCount() {
+  return useHabitStore((s) => s.habits.length);
+}
+
+export function useSelectedDate() {
+  return useHabitStore((s) => s.selectedDate);
 }

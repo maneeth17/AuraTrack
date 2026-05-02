@@ -11,6 +11,67 @@ function getTodayDate(): string {
 
 const SYNC_KEY = 'auratrack-last-sync';
 
+function throttle(fn: () => void, delay: number) {
+  let last = 0;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  return function throttled() {
+    const now = Date.now();
+    if (now - last >= delay) {
+      last = now;
+      fn();
+    } else if (!timer) {
+      timer = setTimeout(() => {
+        last = Date.now();
+        timer = null;
+        fn();
+      }, delay - (now - last));
+    }
+  };
+}
+
+const pendingWrites = new Set<string>();
+let isScheduled = false;
+
+const flushWrites = throttle(() => {
+  const toWrite = Array.from(pendingWrites);
+  pendingWrites.clear();
+  isScheduled = false;
+
+  const data = useHabitStore.getState();
+  const serialized = JSON.stringify({
+    state: {
+      habits: data.habits,
+      logs: data.logs,
+      selectedDate: data.selectedDate,
+    },
+    version: 0,
+  });
+
+  for (const key of toWrite) {
+    try {
+      localStorage.setItem(key, serialized);
+    } catch {
+      // Storage full — silently fail
+    }
+  }
+}, 2000);
+
+function throttledStorage() {
+  const base = createJSONStorage(() => localStorage)!;
+
+  return {
+    ...base,
+    setItem: (name: string, value: never) => {
+      pendingWrites.add(name);
+      if (!isScheduled) {
+        isScheduled = true;
+      }
+      flushWrites();
+      base.setItem(name, value);
+    },
+  } as ReturnType<typeof createJSONStorage>;
+}
+
 async function syncFromServer() {
   try {
     const [habits, logs] = await Promise.all([
@@ -176,7 +237,7 @@ export const useHabitStore = create<HabitStore>()(
     }),
     {
       name: 'auratrack-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: throttledStorage(),
       partialize: (state) => ({
         habits: state.habits,
         logs: state.logs,

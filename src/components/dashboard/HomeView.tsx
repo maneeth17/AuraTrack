@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import { useHabitStore } from '@/store/useHabitStore';
 import { useTodayCompletion } from '@/hooks/useHabits';
 import { RibbonDatePicker } from './RibbonDatePicker';
@@ -25,6 +26,17 @@ export function HomeView({ onOpenSuggestions, onOpenDetail }: HomeViewProps) {
     day: 'numeric',
   });
 
+  const handleCardClick = useCallback(() => {
+    if (habits.length === 0) {
+      onOpenSuggestions();
+    } else {
+      const el = document.getElementById('habits-list');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [habits.length, onOpenSuggestions]);
+
   return (
     <div className="space-y-6 pb-8 lg:pb-4">
       <div className="flex items-start justify-between">
@@ -42,16 +54,7 @@ export function HomeView({ onOpenSuggestions, onOpenDetail }: HomeViewProps) {
       <RibbonDatePicker />
 
       <button
-        onClick={() => {
-          if (habits.length === 0) {
-            onOpenSuggestions();
-          } else {
-            const el = document.getElementById('habits-list');
-            if (el) {
-              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-          }
-        }}
+        onClick={handleCardClick}
         className="bento-card flex items-center gap-5 w-full text-left cursor-pointer group"
       >
         <CircularProgressRing

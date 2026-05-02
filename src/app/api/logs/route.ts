@@ -1,13 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { logs } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { logs, habits } from '@/db/schema';
+import { eq, and, inArray } from 'drizzle-orm';
+import { auth } from '@/auth';
+
+async function getUserHabitIds(userId: string): Promise<string[]> {
+  if (!db) return [];
+  const userHabits = await db.select({ id: habits.id }).from(habits).where(eq(habits.userId, userId));
+  return userHabits.map((h) => h.id);
+}
 
 export async function GET(request: NextRequest) {
   try {
     if (!db) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
     }
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userHabitIds = await getUserHabitIds(session.user.id);
+    if (userHabitIds.length === 0) {
+      return NextResponse.json({ logs: [] });
+    }
+
     const { searchParams } = new URL(request.url);
     const habitId = searchParams.get('habitId');
 
@@ -15,7 +32,7 @@ export async function GET(request: NextRequest) {
     if (habitId) {
       allLogs = await db.select().from(logs).where(eq(logs.habitId, habitId));
     } else {
-      allLogs = await db.select().from(logs);
+      allLogs = await db.select().from(logs).where(inArray(logs.habitId, userHabitIds));
     }
 
     return NextResponse.json({ logs: allLogs });
@@ -29,11 +46,20 @@ export async function POST(request: NextRequest) {
     if (!db) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
     }
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { habitId, date, status } = body;
 
-    const existing = await db.select().from(logs)
-      .where(and(eq(logs.habitId, habitId), eq(logs.date, date)));
+    const habit = await db.select({ id: habits.id }).from(habits).where(and(eq(habits.id, habitId), eq(habits.userId, session.user.id))).limit(1);
+    if (!habit.length) {
+      return NextResponse.json({ error: 'Habit not found' }, { status: 404 });
+    }
+
+    const existing = await db.select().from(logs).where(and(eq(logs.habitId, habitId), eq(logs.date, date)));
 
     if (existing.length > 0) {
       if (existing[0].status === status) {
@@ -66,6 +92,11 @@ export async function DELETE(request: NextRequest) {
     if (!db) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
     }
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const habitId = searchParams.get('habitId');
     const date = searchParams.get('date');

@@ -12,6 +12,7 @@ export interface Habit {
   color: string;
   icon: string;
   createdAt: string;
+  isFocusHabit?: boolean;
 }
 
 export interface Log {
