@@ -44,12 +44,43 @@ body {
     @apply backdrop-blur-md;
   }
   /* Pillar 4: Hardware acceleration for smooth scrolling */
+  .scroll-gpu-layer,
   .gpu-accelerated {
     transform: translateZ(0);
     will-change: transform;
+    backface-visibility: hidden;
+    contain: paint;
   }
-  .disable-backdrop-filter {
+  
+  /* Pillar 1: GPU Layering for Habit Cards - Force GPU compositing */
+  .habit-card-gpu {
+    transform: translateZ(0);
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    contain: layout style paint;
+    isolation: isolate;
+  }
+  
+  /* Prevent backdrop-filter paint bleeding */
+  .glass-card {
+    isolation: isolate;
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+  
+  /* Main scroll container GPU layer */
+  .main-scroll-container {
+    transform: translateZ(0);
+    will-change: scroll-position;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .disable-backdrop-filter,
+  .is-scrolling .glass-blur,
+  .is-scrolling [class*="backdrop-blur"] {
     backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
   .glass-hover {
     @apply hover:bg-white/10 hover:border-white/15 transition-all duration-200;

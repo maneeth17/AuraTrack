@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, Heart, Zap, Brain, Dumbbell, BookOpen, Users, Sun, Droplets, Target, Trophy, Coffee, Moon } from 'lucide-react';
 import { useHabitStore } from '@/store/useHabitStore';
+import { useShallow } from 'zustand/react/shallow';
 
 const SUGGESTED_HABITS = [
   { title: 'Morning Meditation', description: '10 minutes of mindfulness', category: 'Mindfulness', icon: 'brain', color: '#a78bfa' },
@@ -43,10 +44,10 @@ interface HabitSuggestionsProps {
 
 export function HabitSuggestions({ isOpen, onClose }: HabitSuggestionsProps) {
   const addHabit = useHabitStore((s) => s.addHabit);
-  const habits = useHabitStore((s) => s.habits);
+  const habitTitles = useHabitStore(useShallow((s) => s.habits.map((habit) => habit.title)));
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const existingTitles = new Set(habits.map((h) => h.title));
+  const existingTitles = useMemo(() => new Set(habitTitles), [habitTitles]);
 
   function handleAddSelected() {
     selected.forEach((title) => {
@@ -77,7 +78,10 @@ export function HabitSuggestions({ isOpen, onClose }: HabitSuggestionsProps) {
     setSelected(next);
   }
 
-  const availableHabits = SUGGESTED_HABITS.filter((h) => !existingTitles.has(h.title));
+  const availableHabits = useMemo(
+    () => SUGGESTED_HABITS.filter((h) => !existingTitles.has(h.title)),
+    [existingTitles]
+  );
 
   return (
     <AnimatePresence>
@@ -95,9 +99,9 @@ export function HabitSuggestions({ isOpen, onClose }: HabitSuggestionsProps) {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-0 z-50 flex items-end lg:items-center justify-center pointer-events-none"
+            className="fixed inset-0 z-50 flex items-end lg:items-center justify-center pointer-events-none p-0 lg:p-4"
           >
-            <div className="w-full lg:max-w-lg bg-surface border border-white/10 rounded-t-3xl lg:rounded-3xl max-h-[85vh] overflow-hidden flex flex-col pointer-events-auto shadow-2xl">
+            <div className="w-full lg:max-w-lg bg-surface border border-white/10 rounded-t-3xl lg:rounded-3xl max-h-[90vh] lg:max-h-[85vh] overflow-hidden flex flex-col pointer-events-auto shadow-2xl">
               <div className="shrink-0 px-5 pt-5 pb-4 border-b border-white/5">
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-lg font-bold text-white">Quick Start</h2>

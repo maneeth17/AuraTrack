@@ -9,14 +9,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Pillar 4: Disable backdrop-filter while scrolling for performance
   const handleScroll = useCallback(() => {
-    document.body.classList.add('disable-backdrop-filter');
+    document.documentElement.classList.add('is-scrolling');
     
     if (scrollTimeoutRef.current) {
       clearTimeout(scrollTimeoutRef.current);
     }
     
     scrollTimeoutRef.current = setTimeout(() => {
-      document.body.classList.remove('disable-backdrop-filter');
+      document.documentElement.classList.remove('is-scrolling');
     }, 150);
   }, []);
 
@@ -39,6 +39,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
+      document.documentElement.classList.remove('is-scrolling');
     };
   }, [handleScroll]);
 

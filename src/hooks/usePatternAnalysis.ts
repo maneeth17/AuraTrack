@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useHabitStore } from '@/store/useHabitStore';
 
 interface HabitPair {
@@ -49,8 +50,8 @@ interface PatternAnalysis {
 }
 
 export function usePatternAnalysis(): PatternAnalysis {
-  const habits = useHabitStore((s) => s.habits);
-  const logs = useHabitStore((s) => s.logs);
+  const habits = useHabitStore(useShallow((s) => s.habits));
+  const logs = useHabitStore(useShallow((s) => s.logs));
 
   return useMemo(() => {
     const habitMap = new Map(habits.map((h) => [h.id, h.title]));

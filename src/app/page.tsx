@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import nextDynamic from 'next/dynamic';
 import { HomeView } from '@/components/dashboard/HomeView';
 import { BottomNavBar } from '@/components/layout/BottomNavBar';
@@ -12,7 +12,7 @@ import { HabitSuggestions } from '@/components/dashboard/HabitSuggestions';
 import { HabitDetailSheet } from '@/components/dashboard/SwipeableHabitCard';
 import { PomodoroTimer } from '@/components/focus/PomodoroTimer';
 import { useHabitStore } from '@/store/useHabitStore';
-import { useHabitsForDate } from '@/hooks/useHabits';
+import { useHabitById } from '@/hooks/useHabits';
 import { Habit, HabitWithStreak } from '@/types';
 
 const StatsView = nextDynamic(() => import('@/components/analytics/StatsView').then((m) => ({ default: m.StatsView })), {
@@ -59,7 +59,7 @@ function DashboardContent() {
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
-  const [selectedDetailHabit, setSelectedDetailHabit] = useState<HabitWithStreak | null>(null);
+  const [selectedDetailHabitId, setSelectedDetailHabitId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [pomodoroProps, setPomodoroProps] = useState<{
     habitId: string;
@@ -71,7 +71,7 @@ function DashboardContent() {
 
   const selectedDate = useHabitStore((s) => s.selectedDate);
   const setSelectedDate = useHabitStore((s) => s.setSelectedDate);
-  const habitsWithStreak = useHabitsForDate(selectedDate);
+  const resolvedDetailHabit = useHabitById(selectedDetailHabitId ?? '', selectedDate) ?? null;
 
   useEffect(() => {
     setSelectedDate(new Date().toISOString().split('T')[0]);
@@ -108,25 +108,27 @@ function DashboardContent() {
     };
   }, []);
 
-  const handleFabPress = () => {
+  const handleFabPress = useCallback(() => {
     setEditingHabit(null);
     setIsAddSheetOpen(true);
-  };
+  }, []);
 
-  const handleEditHabit = (habit: Habit) => {
+  const handleEditHabit = useCallback((habit: Habit) => {
     setEditingHabit(habit);
     setIsAddSheetOpen(true);
-  };
+  }, []);
 
-  const handleOpenDetail = (habit: HabitWithStreak) => {
-    setSelectedDetailHabit(habit);
+  const handleOpenDetail = useCallback((habit: HabitWithStreak) => {
+    setSelectedDetailHabitId(habit.id);
     setIsDetailOpen(true);
-  };
+  }, []);
+
+  const handleOpenSuggestions = useCallback(() => setIsSuggestionsOpen(true), []);
 
   const renderView = () => {
     switch (activeTab) {
       case 'home':
-        return <HomeView onOpenSuggestions={() => setIsSuggestionsOpen(true)} onOpenDetail={handleOpenDetail} />;
+        return <HomeView onOpenSuggestions={handleOpenSuggestions} onOpenDetail={handleOpenDetail} />;
       case 'stats':
         return <StatsView />;
       case 'lab':
@@ -134,13 +136,9 @@ function DashboardContent() {
       case 'settings':
         return <SettingsView />;
       default:
-        return <HomeView onOpenSuggestions={() => setIsSuggestionsOpen(true)} onOpenDetail={handleOpenDetail} />;
+        return <HomeView onOpenSuggestions={handleOpenSuggestions} onOpenDetail={handleOpenDetail} />;
     }
   };
-
-  const resolvedDetailHabit = selectedDetailHabit
-    ? habitsWithStreak.find((h) => h.id === selectedDetailHabit.id) || selectedDetailHabit
-    : null;
 
   return (
     <>
@@ -182,10 +180,10 @@ function DashboardContent() {
         habit={resolvedDetailHabit}
         date={selectedDate}
         isOpen={isDetailOpen}
-        onClose={() => {
-          setIsDetailOpen(false);
-          setSelectedDetailHabit(null);
-        }}
+          onClose={() => {
+            setIsDetailOpen(false);
+            setSelectedDetailHabitId(null);
+          }}
         onEdit={handleEditHabit}
       />
 
@@ -217,7 +215,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background scroll-gpu-layer">
       <DashboardContent />
     </main>
   );

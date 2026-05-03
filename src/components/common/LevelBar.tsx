@@ -2,14 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { useHabitStore } from '@/store/useHabitStore';
+import { useShallow } from 'zustand/react/shallow';
 import { getXPForLevel } from '@/types';
 import { motion } from 'framer-motion';
 import { Zap, Sparkles } from 'lucide-react';
 import { LevelDetailsModal } from './LevelDetailsModal';
 
 export function LevelBar() {
-  const xp = useHabitStore((s) => s.xp);
-  const level = useHabitStore((s) => s.level);
+  const [xp, level] = useHabitStore(useShallow((s) => [s.xp, s.level]));
   const [showDetails, setShowDetails] = useState(false);
 
   const { progress, totalXPForCurrentLevel, xpForNextLevel } = useMemo(() => {

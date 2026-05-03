@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, Square, Timer, X } from 'lucide-react';
 
@@ -18,143 +18,216 @@ const LONG_BREAK = 15 * 60;
 
 type TimerPhase = 'focus' | 'shortBreak' | 'longBreak';
 
+const PHASE_DURATION: Record<TimerPhase, number> = {
+  focus: FOCUS_DURATION,
+  shortBreak: SHORT_BREAK,
+  longBreak: LONG_BREAK,
+};
+
+const PHASE_LABELS: Record<TimerPhase, string> = {
+  focus: 'Stay focused for 25 minutes',
+  shortBreak: 'Take a 5 minute break',
+  longBreak: 'Take a 15 minute break',
+};
+
+const PHASE_SHORT_LABELS: Record<TimerPhase, string> = {
+  focus: 'Focus',
+  shortBreak: 'Short Break',
+  longBreak: 'Long Break',
+};
+
 function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-export function PomodoroTimer({ habitId, habitTitle, habitColor, onComplete, onClose }: PomodoroTimerProps) {
-  const [phase, setPhase] = useState<TimerPhase>('focus');
-  const [timeLeft, setTimeLeft] = useState(FOCUS_DURATION);
+const PomodoroTimerAtomic = memo(function PomodoroTimer({ habitId, habitTitle, habitColor, onComplete, onClose }: PomodoroTimerProps) {
   const [isRunning, setIsRunning] = useState(false);
-  const [sessionsCompleted, setSessionsCompleted] = useState(0);
-  const [endTime, setEndTime] = useState<number | null>(null);
 
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeTextRef = useRef<HTMLSpanElement | null>(null);
+  const progressCircleRef = useRef<SVGCircleElement | null>(null);
+  const phaseRef = useRef<TimerPhase>('focus');
 
-  // Restore timer state from localStorage only once on mount
+  const timeLeftRef = useRef(FOCUS_DURATION);
+  const endTimeRef = useRef<number | null>(null);
+  const sessionsRef = useRef(0);
+  const circumference = useMemo(() => 2 * Math.PI * 54, []);
+  
+  const phaseTextRef = useRef<HTMLParagraphElement | null>(null);
+  const sessionsContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const paintTime = useCallback((seconds: number, activePhase = phaseRef.current) => {
+    timeLeftRef.current = seconds;
+
+    if (timeTextRef.current) {
+      timeTextRef.current.textContent = formatTime(seconds);
+    }
+
+    if (progressCircleRef.current) {
+      const totalTime = PHASE_DURATION[activePhase];
+      const pct = totalTime > 0 ? (totalTime - seconds) / totalTime : 0;
+      progressCircleRef.current.style.strokeDashoffset = String(
+        circumference - pct * circumference
+      );
+    }
+  }, [circumference]);
+
+  const paintPhaseUI = useCallback((activePhase: TimerPhase, sessions: number) => {
+    if (phaseTextRef.current) {
+      phaseTextRef.current.textContent = PHASE_LABELS[activePhase];
+    }
+    if (sessionsContainerRef.current) {
+      const dots = Array.from({ length: 4 }).map((_, i) => {
+        const isActive = i < (sessions % 4);
+        return `<div class="w-2 h-2 rounded-full" style="background-color: ${isActive ? habitColor : 'rgba(255,255,255,0.1)'}"></div>`;
+      }).join('');
+      sessionsContainerRef.current.innerHTML = `
+        <div class="flex items-center justify-center gap-1.5">${dots}<span class="text-xs text-white/30 ml-2">${sessions} sessions</span></div>
+      `;
+    }
+  }, [habitColor]);
+
+  const clearTick = useCallback(() => {
+    if (tickRef.current) {
+      clearInterval(tickRef.current);
+      tickRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     const saved = localStorage.getItem(`pomodoro-${habitId}`);
     if (saved) {
       try {
-        const { endTime: savedEnd, phase: savedPhase, sessions } = JSON.parse(saved);
+        const { endTime: savedEnd, phase: savedPhase, sessions, timeLeft: savedTimeLeft } = JSON.parse(saved);
+        const restoredPhase = (savedPhase || 'focus') as TimerPhase;
+        phaseRef.current = restoredPhase;
+        sessionsRef.current = sessions || 0;
+
         if (savedEnd && typeof savedEnd === 'number') {
           const remaining = Math.max(0, Math.ceil((savedEnd - Date.now()) / 1000));
           if (remaining > 0) {
-            setEndTime(savedEnd);
-            setPhase(savedPhase || 'focus');
-            setTimeLeft(remaining);
-            setSessionsCompleted(sessions || 0);
+            endTimeRef.current = savedEnd;
+            paintTime(remaining, restoredPhase);
+            paintPhaseUI(restoredPhase, sessionsRef.current);
             setIsRunning(true);
           } else {
             localStorage.removeItem(`pomodoro-${habitId}`);
+            paintTime(PHASE_DURATION[restoredPhase], restoredPhase);
+            paintPhaseUI(restoredPhase, sessionsRef.current);
           }
+        } else if (typeof savedTimeLeft === 'number') {
+          paintTime(savedTimeLeft, restoredPhase);
+          paintPhaseUI(restoredPhase, sessionsRef.current);
+        } else {
+          paintTime(PHASE_DURATION[restoredPhase], restoredPhase);
+          paintPhaseUI(restoredPhase, sessionsRef.current);
         }
       } catch {
         localStorage.removeItem(`pomodoro-${habitId}`);
+        paintTime(FOCUS_DURATION, 'focus');
+        paintPhaseUI('focus', 0);
       }
+    } else {
+      paintTime(FOCUS_DURATION, 'focus');
+      paintPhaseUI('focus', 0);
     }
-    // Only run on mount, not when habitId changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [habitId, paintTime, paintPhaseUI]);
 
   const handlePhaseComplete = useCallback(() => {
-    if (tickRef.current) clearInterval(tickRef.current);
+    clearTick();
     setIsRunning(false);
-    setEndTime(null);
+    endTimeRef.current = null;
 
-    if (phase === 'focus') {
-      const newSessions = sessionsCompleted + 1;
-      setSessionsCompleted(newSessions);
+    if (phaseRef.current === 'focus') {
+      const newSessions = sessionsRef.current + 1;
+      sessionsRef.current = newSessions;
 
       if (typeof window !== 'undefined' && navigator.vibrate) {
         navigator.vibrate([100, 50, 100]);
       }
 
       if (newSessions % 4 === 0) {
-        setPhase('longBreak');
-        setTimeLeft(LONG_BREAK);
+        phaseRef.current = 'longBreak';
+        paintTime(LONG_BREAK, 'longBreak');
+        paintPhaseUI('longBreak', newSessions);
       } else {
-        setPhase('shortBreak');
-        setTimeLeft(SHORT_BREAK);
+        phaseRef.current = 'shortBreak';
+        paintTime(SHORT_BREAK, 'shortBreak');
+        paintPhaseUI('shortBreak', newSessions);
       }
 
       if (newSessions >= 1) {
         onComplete();
       }
     } else {
-      setPhase('focus');
-      setTimeLeft(FOCUS_DURATION);
+      phaseRef.current = 'focus';
+      paintTime(FOCUS_DURATION, 'focus');
+      paintPhaseUI('focus', sessionsRef.current);
     }
 
     localStorage.removeItem(`pomodoro-${habitId}`);
-  }, [phase, sessionsCompleted, habitId, onComplete]);
+  }, [clearTick, habitId, onComplete, paintTime, paintPhaseUI]);
 
-  // Timer tick - only depend on endTime and isRunning
   useEffect(() => {
-    if (!endTime || !isRunning) return;
+    if (!isRunning || !endTimeRef.current) return;
 
     const updateTime = () => {
+      const endTime = endTimeRef.current;
+      if (!endTime) return;
+
       const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
-      setTimeLeft(remaining);
+      paintTime(remaining);
 
       if (remaining === 0) {
         handlePhaseComplete();
       }
     };
 
-    // Update immediately
     updateTime();
-
     tickRef.current = setInterval(updateTime, 1000);
 
-    return () => {
-      if (tickRef.current) clearInterval(tickRef.current);
-    };
-  }, [endTime, isRunning, handlePhaseComplete]);
+    return clearTick;
+  }, [clearTick, handlePhaseComplete, isRunning, paintTime]);
 
   const handleStart = () => {
-    const end = Date.now() + (timeLeft * 1000);
-    setEndTime(end);
+    const end = Date.now() + (timeLeftRef.current * 1000);
+    endTimeRef.current = end;
     setIsRunning(true);
-    localStorage.setItem(`pomodoro-${habitId}`, JSON.stringify({ endTime: end, phase, sessions: sessionsCompleted }));
+    localStorage.setItem(`pomodoro-${habitId}`, JSON.stringify({ endTime: end, phase: phaseRef.current, sessions: sessionsRef.current }));
   };
 
   const handlePause = () => {
-    if (tickRef.current) clearInterval(tickRef.current);
+    clearTick();
+    if (endTimeRef.current) {
+      paintTime(Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000)));
+    }
     setIsRunning(false);
-    setEndTime(null);
-    localStorage.setItem(`pomodoro-${habitId}`, JSON.stringify({ endTime: Date.now() + (timeLeft * 1000), phase, sessions: sessionsCompleted, timeLeft }));
+    endTimeRef.current = null;
+    localStorage.setItem(`pomodoro-${habitId}`, JSON.stringify({ endTime: null, phase: phaseRef.current, sessions: sessionsRef.current, timeLeft: timeLeftRef.current }));
   };
 
   const handleCancel = () => {
-    if (tickRef.current) clearInterval(tickRef.current);
+    clearTick();
     setIsRunning(false);
-    setEndTime(null);
-    setTimeLeft(phase === 'focus' ? FOCUS_DURATION : phase === 'shortBreak' ? SHORT_BREAK : LONG_BREAK);
+    endTimeRef.current = null;
+    paintTime(PHASE_DURATION[phaseRef.current]);
+    paintPhaseUI(phaseRef.current, sessionsRef.current);
     localStorage.removeItem(`pomodoro-${habitId}`);
     onClose();
   };
 
   const handleReset = () => {
-    if (tickRef.current) clearInterval(tickRef.current);
+    clearTick();
     setIsRunning(false);
-    setEndTime(null);
-    setTimeLeft(FOCUS_DURATION);
-    setPhase('focus');
-    setSessionsCompleted(0);
+    endTimeRef.current = null;
+    phaseRef.current = 'focus';
+    sessionsRef.current = 0;
+    paintTime(FOCUS_DURATION, 'focus');
+    paintPhaseUI('focus', 0);
     localStorage.removeItem(`pomodoro-${habitId}`);
   };
-
-  // Memoize expensive calculations
-  const { circumference, strokeDashoffset } = useMemo(() => {
-    const totalTime = phase === 'focus' ? FOCUS_DURATION : phase === 'shortBreak' ? SHORT_BREAK : LONG_BREAK;
-    const pct = ((totalTime - timeLeft) / totalTime) * 100;
-    const circ = 2 * Math.PI * 54;
-    const offset = circ - (pct / 100) * circ;
-    return { circumference: circ, strokeDashoffset: offset };
-  }, [phase, timeLeft]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -162,7 +235,7 @@ export function PomodoroTimer({ habitId, habitTitle, habitColor, onComplete, onC
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="glass rounded-3xl border border-white/10 p-8 w-full max-w-sm shadow-2xl relative"
+        className="glass glass-card rounded-3xl border border-white/10 p-8 w-full max-w-sm shadow-2xl relative gpu-accelerated"
       >
         <button onClick={handleCancel} className="absolute top-4 right-4 min-h-[44px] min-w-[44px] rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
           <X className="w-5 h-5 text-white/60" />
@@ -174,8 +247,8 @@ export function PomodoroTimer({ habitId, habitTitle, habitColor, onComplete, onC
             <span className="text-xs font-medium text-accent">Focus Session</span>
           </div>
           <h3 className="text-lg font-bold text-white">{habitTitle}</h3>
-          <p className="text-xs text-white/40 mt-1">
-            {phase === 'focus' ? 'Stay focused for 25 minutes' : phase === 'shortBreak' ? 'Take a 5 minute break' : 'Take a 15 minute break'}
+          <p ref={phaseTextRef} className="text-xs text-white/40 mt-1">
+            {PHASE_LABELS[phaseRef.current]}
           </p>
         </div>
 
@@ -183,7 +256,8 @@ export function PomodoroTimer({ habitId, habitTitle, habitColor, onComplete, onC
           <div className="relative w-48 h-48">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
               <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="4" />
-              <motion.circle
+              <circle
+                ref={progressCircleRef}
                 cx="60"
                 cy="60"
                 r="54"
@@ -192,15 +266,14 @@ export function PomodoroTimer({ habitId, habitTitle, habitColor, onComplete, onC
                 strokeWidth="4"
                 strokeLinecap="round"
                 strokeDasharray={circumference}
-                animate={{ strokeDashoffset }}
-                transition={{ duration: 0.5, ease: 'linear' }}
+                style={{ strokeDashoffset: circumference, transition: 'stroke-dashoffset 500ms linear' }}
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-4xl font-bold text-white font-mono" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {formatTime(timeLeft)}
+              <span ref={timeTextRef} className="text-4xl font-bold text-white font-mono" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {formatTime(FOCUS_DURATION)}
               </span>
-              <span className="text-xs text-white/40 mt-1 capitalize">{phase === 'focus' ? 'Focus' : phase === 'shortBreak' ? 'Short Break' : 'Long Break'}</span>
+              <span className="text-xs text-white/40 mt-1 capitalize">{PHASE_SHORT_LABELS[phaseRef.current]}</span>
             </div>
           </div>
         </div>
@@ -233,19 +306,10 @@ export function PomodoroTimer({ habitId, habitTitle, habitColor, onComplete, onC
           </button>
         </div>
 
-        {sessionsCompleted > 0 && (
-          <div className="mt-6 flex items-center justify-center gap-1.5">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="w-2 h-2 rounded-full transition-colors"
-                style={{ backgroundColor: i < (sessionsCompleted % 4) ? habitColor : 'rgba(255,255,255,0.1)' }}
-              />
-            ))}
-            <span className="text-xs text-white/30 ml-2">{sessionsCompleted} sessions</span>
-          </div>
-        )}
+        <div ref={sessionsContainerRef} className="mt-6" />
       </motion.div>
     </div>
   );
-}
+});
+
+export { PomodoroTimerAtomic as PomodoroTimer };

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { motion, PanInfo, useMotionValue, useTransform, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { memo, useState } from 'react';
+import { motion, PanInfo, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
 import { Check, X as XIcon, Heart, Zap, Brain, Dumbbell, BookOpen, Users, Sun, Moon, Droplets, Coffee, Target, Trophy, Music, Camera, Smile, Star, Shield, Flame, Pencil, Trash2, X, ChevronRight, Calendar, TrendingUp, Award, AlertTriangle, Timer } from 'lucide-react';
 import { HabitWithStreak, Habit } from '@/types';
-import { useHabitStore } from '@/store/useHabitStore';
+import { useHabitById, useHabitLogs, useHabitActions } from '@/hooks/useHabits';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   heart: Heart,
@@ -28,66 +28,72 @@ const iconMap: Record<string, React.ComponentType<{ className?: string; style?: 
 };
 
 interface SwipeableHabitCardProps {
-  habit: HabitWithStreak;
+  habitId: string;
   date: string;
   onOpenDetail: (habit: HabitWithStreak) => void;
   onComplete: () => void;
 }
 
-export function SwipeableHabitCard({ habit, date, onOpenDetail, onComplete }: SwipeableHabitCardProps) {
-  // Pillar 1: Selective subscriptions - useMemo to avoid re-renders
-  const markHabit = useHabitStore((s) => s.markHabit);
-  const toggleHabit = useHabitStore((s) => s.toggleHabit);
-  const incrementHabitCount = useHabitStore((s) => s.incrementHabitCount);
-  const decrementHabitCount = useHabitStore((s) => s.decrementHabitCount);
-  
-  // Get only this habit's logs - memoized to avoid re-renders
-  const logs = useHabitStore((s) => s.logs);
-  const habitLogs = useMemo(() => logs.filter((l: any) => l.habitId === habit.id), [logs, habit.id]);
-  const todayLog = useMemo(() => habitLogs.find((l: any) => l.date === date), [habitLogs, date]);
+export const SwipeableHabitCard = memo(function SwipeableHabitCard({
+  habitId,
+  date,
+  onOpenDetail,
+  onComplete,
+}: SwipeableHabitCardProps) {
+  const habit = useHabitById(habitId, date);
+  const habitLogs = useHabitLogs(habitId);
+  const todayLog = habitLogs.find((log) => log.date === date);
+  const { markHabit, toggleHabit, incrementHabitCount, decrementHabitCount } = useHabitActions();
   
   const x = useMotionValue(0);
   const opacityRight = useTransform(x, [0, 80, 150], [0, 0.5, 1]);
   const opacityLeft = useTransform(x, [0, -80, -150], [0, 0.5, 1]);
   const scale = useTransform(x, [-150, 0, 150], [0.95, 1, 0.95]);
 
+  if (!habit) return null;
+
   const isCompleted = habit.todayStatus === 'completed';
-  const isCountBased = habit.targetCount && habit.targetCount > 1;
+  const isCountBased = Boolean(habit.targetCount && habit.targetCount > 1);
   const currentCount = todayLog?.count || 0;
   const targetCount = habit.targetCount || 1;
   const IconComponent = iconMap[habit.icon];
 
+  const todayString = new Date().toISOString().split('T')[0];
+  const isFutureDate = date > todayString;
+
   function handleDragEnd(_event: MouseEvent | TouchEvent, info: PanInfo) {
+    if (isFutureDate) return;
     if (info.offset.x > 100) {
       if (isCountBased) {
-        incrementHabitCount(habit.id, date);
+        incrementHabitCount(habitId, date);
       } else {
-        markHabit(habit.id, date, 'completed');
+        markHabit(habitId, date, 'completed');
       }
       if (onComplete) onComplete();
     } else if (info.offset.x < -100) {
       if (isCountBased && currentCount > 0) {
-        decrementHabitCount(habit.id, date);
+        decrementHabitCount(habitId, date);
       } else if (isCompleted) {
-        toggleHabit(habit.id, date);
+        toggleHabit(habitId, date);
       }
     }
   }
 
   function handleCheckboxClick() {
+    if (isFutureDate) return;
     if (isCountBased) {
       if (currentCount > 0) {
-        decrementHabitCount(habit.id, date);
+        decrementHabitCount(habitId, date);
       } else {
-        incrementHabitCount(habit.id, date);
+        incrementHabitCount(habitId, date);
       }
       if (currentCount + 1 >= targetCount && onComplete) {
         onComplete();
       }
     } else if (isCompleted) {
-      toggleHabit(habit.id, date);
+      toggleHabit(habitId, date);
     } else {
-      markHabit(habit.id, date, 'completed');
+      markHabit(habitId, date, 'completed');
     }
   }
 
@@ -109,16 +115,17 @@ export function SwipeableHabitCard({ habit, date, onOpenDetail, onComplete }: Sw
         <span className="ml-2 text-xs font-medium text-warning/80">Uncheck</span>
       </motion.div>
 
-      <motion.div
-        style={{ x, scale }}
-        drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.15}
-        onDragEnd={handleDragEnd}
-        animate={isCompleted ? { scale: 1.02 } : { scale: 1 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-        className="relative glass rounded-2xl p-4 cursor-grab active:cursor-grabbing"
-      >
+       <motion.div
+         style={{ x, scale }}
+         drag={isFutureDate ? false : "x"}
+         dragConstraints={{ left: 0, right: 0 }}
+         dragElastic={0.15}
+         dragTransition={{ power: 0.2, timeConstant: 300 }}
+         onDragEnd={handleDragEnd}
+         animate={isCompleted ? { scale: 1.02 } : { scale: 1 }}
+         transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+         className="relative glass glass-card rounded-2xl p-4 cursor-grab active:cursor-grabbing habit-card-gpu"
+       >
         <div
           className="flex items-center gap-3"
           onClick={() => onOpenDetail(habit)}
@@ -201,11 +208,12 @@ export function SwipeableHabitCard({ habit, date, onOpenDetail, onComplete }: Sw
               e.stopPropagation();
               handleCheckboxClick();
             }}
+            disabled={isFutureDate}
             className={`min-h-[44px] min-w-[44px] rounded-lg border-2 flex items-center justify-center transition-all duration-200 shrink-0 ${
               isCompleted
                 ? 'border-success bg-success/20 hover:bg-success/30'
                 : 'border-white/20 hover:border-accent/50 hover:bg-accent/10'
-            }`}
+            } ${isFutureDate ? 'opacity-30 cursor-not-allowed' : ''}`}
           >
             {isCompleted && <Check className="w-5 h-5 text-success" />}
           </button>
@@ -215,7 +223,7 @@ export function SwipeableHabitCard({ habit, date, onOpenDetail, onComplete }: Sw
       </motion.div>
     </div>
   );
-}
+});
 
 interface HabitDetailSheetProps {
   habit: HabitWithStreak | null;
@@ -226,7 +234,7 @@ interface HabitDetailSheetProps {
 }
 
 export function HabitDetailSheet({ habit, isOpen, onClose, onEdit }: HabitDetailSheetProps & { date?: string }) {
-  const deleteHabit = useHabitStore((s) => s.deleteHabit);
+  const { deleteHabit } = useHabitActions();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (!habit) return null;

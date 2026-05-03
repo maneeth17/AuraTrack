@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useTodayCompletion, useWeeklyMomentum, useHabitsForDate } from '@/hooks/useHabits';
 import { useHabitStore } from '@/store/useHabitStore';
 import { CircularProgressRing } from './CircularProgressRing';
@@ -14,7 +15,7 @@ export function StatsView() {
   const completion = useTodayCompletion(selectedDate);
   const momentum = useWeeklyMomentum();
   const habits = useHabitsForDate(selectedDate);
-  const logs = useHabitStore((s) => s.logs);
+  const logs = useHabitStore(useShallow((s) => s.logs));
   const [timeRange, setTimeRange] = useState<TimeRange>('week');
 
   // Calculate advanced stats

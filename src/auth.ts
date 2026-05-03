@@ -1,5 +1,5 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-import type { NextAuthOptions } from 'next-auth';
+import type { NextAuthConfig } from 'next-auth';
+import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { db } from '@/db';
@@ -24,7 +24,7 @@ if (isServer && db) {
   }
 }
 
-export const authOptions: NextAuthOptions = {
+export const authOptions: NextAuthConfig = {
   adapter,
   providers: [
     Credentials({
@@ -59,7 +59,7 @@ export const authOptions: NextAuthOptions = {
             password: hashedPassword,
           }).returning();
 
-          return { id: newUser[0].id, email: newUser[0].email, name: newUser[0].name || null };
+          return { id: newUser[0].id, email: newUser[0].email, name: newUser[0].name || null, xp: 0, level: 1 };
         }
 
         const existingUser = await db!.select().from(users).where(eq(users.email, email)).limit(1);
@@ -77,7 +77,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        return { id: user.id, email: user.email, name: user.name || null };
+        return { id: user.id, email: user.email, name: user.name || null, xp: user.xp || 0, level: user.level || 1 };
       },
     }),
   ],
@@ -88,14 +88,30 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async session({ session, token }: any) {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.xp = user.xp || 0;
+        token.level = user.level || 1;
+      }
+      return token;
+    },
+    async session({ session, token }) {
       if (session?.user && token?.sub) {
         session.user.id = token.sub;
+        session.user.xp = token.xp;
+        session.user.level = token.level;
       }
       return session;
+    },
+  },
+  events: {
+    async signIn({ user }) {
+      console.log('[auth] Sign in event, user:', user?.id, 'xp:', user?.xp, 'level:', user?.level);
     },
   },
 };
 
 export default authOptions;
+
+export const { handlers, auth, signIn, signOut } = NextAuth(authOptions);

@@ -39,7 +39,8 @@ export interface HabitStore {
   habits: Habit[];
   logs: Log[];
   selectedDate: string;
-  syncFromServer: () => Promise<void>;
+  isSyncing: boolean;
+  syncFromServer: (retryCount?: number) => Promise<void>;
   addHabit: (habit: Omit<Habit, 'id' | 'createdAt'>) => void | Promise<void>;
   updateHabit: (id: string, updates: Partial<Habit>) => void | Promise<void>;
   deleteHabit: (id: string) => void | Promise<void>;
@@ -56,7 +57,7 @@ export interface HabitStore {
   xp: number;
   level: number;
   addXP: (amount: number) => void;
-  checkLevelUp: () => void;
+  checkLevelUp: () => boolean;
   pomodoroSettings: {
     focusDuration: number;
     shortBreak: number;

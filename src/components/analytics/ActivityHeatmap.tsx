@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useHabitStore } from '@/store/useHabitStore';
 
 function formatDate(date: Date): string {
@@ -8,8 +9,8 @@ function formatDate(date: Date): string {
 }
 
 export function ActivityHeatmap() {
-  const logs = useHabitStore((s) => s.logs);
-  const habits = useHabitStore((s) => s.habits);
+  const logs = useHabitStore(useShallow((s) => s.logs));
+  const habitCount = useHabitStore((s) => s.habits.length);
 
   const heatmapData = useMemo(() => {
     const today = new Date();
@@ -22,7 +23,7 @@ export function ActivityHeatmap() {
       completionMap.set(log.date, (completionMap.get(log.date) || 0) + 1);
     });
 
-    const maxPossible = Math.max(habits.length, 1);
+    const maxPossible = Math.max(habitCount, 1);
 
     for (let i = 364; i >= 0; i--) {
       const d = new Date(today);
@@ -33,7 +34,7 @@ export function ActivityHeatmap() {
     }
 
     return days;
-  }, [logs, habits]);
+  }, [logs, habitCount]);
 
   function getIntensity(count: number, maxCount: number): number {
     if (count === 0) return 0;

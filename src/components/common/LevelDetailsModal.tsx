@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trophy, Sparkles, Zap } from 'lucide-react';
 import { useHabitStore } from '@/store/useHabitStore';
 import { getXPForLevel } from '@/types';
+import { useShallow } from 'zustand/react/shallow';
 
 interface LevelDetailsModalProps {
   isOpen: boolean;
@@ -11,8 +12,7 @@ interface LevelDetailsModalProps {
 }
 
 export function LevelDetailsModal({ isOpen, onClose }: LevelDetailsModalProps) {
-  const xp = useHabitStore((s) => s.xp);
-  const level = useHabitStore((s) => s.level);
+  const [xp, level] = useHabitStore(useShallow((s) => [s.xp, s.level]));
 
   const totalXPForCurrentLevel = (() => {
     let xpUsed = 0;
@@ -41,7 +41,7 @@ export function LevelDetailsModal({ isOpen, onClose }: LevelDetailsModalProps) {
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="w-full max-w-md bento-card m-4"
+            className="w-full max-w-md bento-card m-4 sm:m-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">

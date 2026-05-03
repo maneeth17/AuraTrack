@@ -4,13 +4,15 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import { Download, Upload, Trash2, Info, LogOut, Share2, Copy, Check } from 'lucide-react';
 import { useHabitStore } from '@/store/useHabitStore';
 import { signOut } from 'next-auth/react';
+import { useShallow } from 'zustand/react/shallow';
 
 export function SettingsView() {
-  const exportData = useHabitStore((s) => s.exportData);
-  const importData = useHabitStore((s) => s.importData);
-  const resetAll = useHabitStore((s) => s.resetAll);
-  const habits = useHabitStore((s) => s.habits);
-  const logs = useHabitStore((s) => s.logs);
+  const [exportData, importData, resetAll] = useHabitStore(
+    useShallow((s) => [s.exportData, s.importData, s.resetAll])
+  );
+  const [habitCount, logCount] = useHabitStore(
+    useShallow((s) => [s.habits.length, s.logs.length])
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [shareId, setShareId] = useState<string | null>(null);
@@ -223,14 +225,14 @@ export function SettingsView() {
                 <Info className="w-4 h-4 text-white/30" />
                 <span className="text-sm text-white/50">Habits</span>
               </div>
-              <span className="text-sm text-white/30 font-mono">{habits.length}</span>
+              <span className="text-sm text-white/30 font-mono">{habitCount}</span>
             </div>
             <div className="flex items-center justify-between py-2">
               <div className="flex items-center gap-2">
                 <Info className="w-4 h-4 text-white/30" />
                 <span className="text-sm text-white/50">Total Logs</span>
               </div>
-              <span className="text-sm text-white/30 font-mono">{logs.length}</span>
+              <span className="text-sm text-white/30 font-mono">{logCount}</span>
             </div>
           </div>
         </div>
@@ -238,7 +240,10 @@ export function SettingsView() {
 
       <div className="bento-card">
         <button
-          onClick={() => signOut({ callbackUrl: '/login' })}
+          onClick={() => {
+            localStorage.removeItem('auratrack-user-id');
+            signOut({ callbackUrl: '/login' });
+          }}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-danger/10 border border-danger/20 hover:bg-danger/20 transition-all"
         >
           <LogOut className="w-5 h-5 text-danger shrink-0" />

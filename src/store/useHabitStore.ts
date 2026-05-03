@@ -33,51 +33,52 @@ const customStorage = createJSONStorage(() => ({
   },
 }));
 
-// Pomodoro settings helpers
 function loadPomodoroSettings() {
   if (typeof window === 'undefined') {
-    return {
-      focusDuration: 25 * 60,
-      shortBreak: 5 * 60,
-      longBreak: 15 * 60,
-      enabled: false,
-    };
+    return { focusDuration: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60, enabled: false };
   }
   try {
     const saved = localStorage.getItem('auratrack-pomodoro-settings');
     return saved ? JSON.parse(saved) : {
-      focusDuration: 25 * 60,
-      shortBreak: 5 * 60,
-      longBreak: 15 * 60,
-      enabled: false,
+      focusDuration: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60, enabled: false,
     };
   } catch {
-    return {
-      focusDuration: 25 * 60,
-      shortBreak: 5 * 60,
-      longBreak: 15 * 60,
-      enabled: false,
-    };
+    return { focusDuration: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60, enabled: false };
   }
 }
 
-function savePomodoroSettings(settings: HabitStore['pomodoroSettings']) {
+export function savePomodoroSettings(settings: { focusDuration: number; shortBreak: number; longBreak: number; enabled: boolean }) {
   if (typeof window !== 'undefined') {
     localStorage.setItem('auratrack-pomodoro-settings', JSON.stringify(settings));
   }
 }
 
-const syncFromServer = async () => {
+// Sync from server - call this AFTER login
+export async function syncFromServer(): Promise<void> {
+  console.log('[syncFromServer] Starting sync...');
   try {
-    const [habits, logs] = await Promise.all([
+    const [habits, logs, userData] = await Promise.all([
       api.fetchHabits(),
       api.fetchLogs(),
+      api.fetchUser(),
     ]);
-    useHabitStore.setState({ habits, logs });
-  } catch (error) {
-    console.error('Failed to sync from server:', error);
+    console.log('[syncFromServer] Got:', habits.length, 'habits,', logs.length, 'logs, XP:', userData.xp);
+    
+    // Import store dynamically to avoid circular reference
+    const { useHabitStore } = await import('@/store/useHabitStore');
+    useHabitStore.setState({
+      habits,
+      logs,
+      xp: userData.xp || 0,
+      level: userData.level || 1,
+    });
+    
+    localStorage.setItem(SYNC_KEY, new Date().toISOString());
+    console.log('[syncFromServer] Sync complete');
+  } catch (error: unknown) {
+    console.error('[syncFromServer] Error:', error);
   }
-};
+}
 
 export const useHabitStore = create<HabitStore>()(
   persist(
@@ -87,20 +88,14 @@ export const useHabitStore = create<HabitStore>()(
       selectedDate: getTodayDate(),
       xp: 0,
       level: 1,
+      isSyncing: false,
       pomodoroSettings: loadPomodoroSettings(),
 
+      // This is called from login page after successful auth
       syncFromServer,
 
       setSelectedDate: (date: string) => {
         set({ selectedDate: date });
-      },
-
-      setPomodoroSettings: (settings: Partial<HabitStore['pomodoroSettings']>) => {
-        set((state) => {
-          const newSettings = { ...state.pomodoroSettings, ...settings };
-          savePomodoroSettings(newSettings);
-          return { pomodoroSettings: newSettings };
-        });
       },
 
       addHabit: async (habit: Omit<Habit, 'id' | 'createdAt'>) => {
@@ -109,13 +104,11 @@ export const useHabitStore = create<HabitStore>()(
           id: generateId(),
           createdAt: new Date().toISOString(),
         };
-
         set((state) => ({ habits: [...state.habits, newHabit] }));
-
         try {
           await api.createHabit(newHabit);
-        } catch {
-          // Queue for retry when online
+        } catch (e) {
+          console.error('addHabit API error:', e);
         }
       },
 
@@ -123,25 +116,10 @@ export const useHabitStore = create<HabitStore>()(
         set((state) => ({
           habits: state.habits.map((h) => (h.id === id ? { ...h, ...updates } : h)),
         }));
-
         try {
           await api.updateHabit(id, updates);
-        } catch {
-          // Queue for retry when online
-        }
-      },
-
-      setHabitTargetCount: (id: string, targetCount: number) => {
-        set((state) => ({
-          habits: state.habits.map((h) =>
-            h.id === id ? { ...h, targetCount } : h
-          ),
-        }));
-
-        try {
-          api.updateHabit(id, { targetCount } as Partial<Habit>);
-        } catch {
-          // Queue for retry when online
+        } catch (e) {
+          console.error('updateHabit API error:', e);
         }
       },
 
@@ -150,69 +128,94 @@ export const useHabitStore = create<HabitStore>()(
           habits: state.habits.filter((h) => h.id !== id),
           logs: state.logs.filter((l) => l.habitId !== id),
         }));
-
         try {
-          api.deleteHabit(id);
-        } catch {
-          // Queue for retry when online
+          await api.deleteHabit(id);
+        } catch (e) {
+          console.error('deleteHabit API error:', e);
         }
       },
 
       markHabit: async (habitId: string, date: string, status: LogStatus) => {
-        set((state) => {
-          const existingIndex = state.logs.findIndex(
-            (l) => l.habitId === habitId && l.date === date
-          );
+        const state = get();
+        const existingIndex = state.logs.findIndex(
+          (l) => l.habitId === habitId && l.date === date
+        );
 
-          let newLogs: Log[];
+        let xpChange = 0;
 
-          if (existingIndex >= 0) {
-            const existingLog = state.logs[existingIndex];
-            if (existingLog.status === status) {
-              newLogs = [
-                ...state.logs.slice(0, existingIndex),
-                ...state.logs.slice(existingIndex + 1),
-              ];
-            } else {
-              newLogs = state.logs.map((l, i) =>
-                i === existingIndex ? { ...l, status } : l
-              );
-            }
-          } else {
-            newLogs = [...state.logs, { habitId, date, status }];
-          }
-
-          return { logs: newLogs };
-        });
-
-        try {
-          api.upsertLog(habitId, date, status);
-        } catch {
-          // Queue for retry when online
-        }
-      },
-
-      toggleHabit: async (habitId: string, date: string) => {
-        set((state) => {
-          const existingIndex = state.logs.findIndex(
-            (l) => l.habitId === habitId && l.date === date
-          );
-
-          if (existingIndex >= 0 && state.logs[existingIndex].status === 'completed') {
-            return {
+        if (existingIndex >= 0) {
+          const existingLog = state.logs[existingIndex];
+          if (existingLog.status === status) {
+            // Remove log
+            set((state) => ({
               logs: [
                 ...state.logs.slice(0, existingIndex),
                 ...state.logs.slice(existingIndex + 1),
               ],
-            };
+            }));
+            if (existingLog.status === 'completed') xpChange = -10;
+          } else {
+            set((state) => ({
+              logs: state.logs.map((l, i) =>
+                i === existingIndex ? { ...l, status } : l
+              ),
+            }));
+            if (status === 'completed' && existingLog.status !== 'completed') xpChange = 10;
+            if (existingLog.status === 'completed' && status !== 'completed') xpChange = -10;
           }
+        } else {
+          set((state) => ({
+            logs: [...state.logs, { habitId, date, status }],
+          }));
+          if (status === 'completed') xpChange = 10;
+        }
 
-          return {
+        if (xpChange !== 0) {
+          set((state) => {
+            const newXP = Math.max(0, state.xp + xpChange);
+            return { xp: newXP, level: getLevelFromXP(newXP) };
+          });
+        }
+
+        try {
+          await api.upsertLog(habitId, date, status);
+          api.updateUserXP(get().xp, get().level).catch(() => {});
+        } catch (e) {
+          console.error('markHabit API error:', e);
+        }
+      },
+
+      toggleHabit: async (habitId: string, date: string) => {
+        const state = get();
+        const existingIndex = state.logs.findIndex(
+          (l) => l.habitId === habitId && l.date === date
+        );
+
+        let xpChange = 0;
+
+        if (existingIndex >= 0 && state.logs[existingIndex].status === 'completed') {
+          // Unchecking
+          set((state) => ({
+            logs: [
+              ...state.logs.slice(0, existingIndex),
+              ...state.logs.slice(existingIndex + 1),
+            ],
+          }));
+          xpChange = -10;
+        } else {
+          // Checking
+          set((state) => ({
             logs: [
               ...state.logs,
               { habitId, date, status: 'completed' as const },
             ],
-          };
+          }));
+          xpChange = 10;
+        }
+
+        set((state) => {
+          const newXP = Math.max(0, state.xp + xpChange);
+          return { xp: newXP, level: getLevelFromXP(newXP) };
         });
 
         try {
@@ -220,75 +223,108 @@ export const useHabitStore = create<HabitStore>()(
             (l) => l.habitId === habitId && l.date === date
           );
           if (existing && existing.status === 'completed') {
-            api.deleteLog(habitId, date);
+            await api.deleteLog(habitId, date);
           } else {
-            api.upsertLog(habitId, date, 'completed');
+            await api.upsertLog(habitId, date, 'completed');
           }
-        } catch {
-          // Queue for retry when online
-        }
+          api.updateUserXP(get().xp, get().level).catch(() => {});
+        } catch {}
       },
 
       incrementHabitCount: (habitId: string, date: string) => {
-        set((state) => {
-          const existingIndex = state.logs.findIndex(
-            (l) => l.habitId === habitId && l.date === date
-          );
+        const state = get();
+        const existingIndex = state.logs.findIndex(
+          (l) => l.habitId === habitId && l.date === date
+        );
 
-          if (existingIndex >= 0) {
-            const existingLog = state.logs[existingIndex];
-            const newCount = (existingLog.count || 0) + 1;
-            return {
-              logs: state.logs.map((l, i) =>
-                i === existingIndex ? { ...l, count: newCount, status: 'completed' as const } : l
-              ),
-            };
+        const habit = state.habits.find(h => h.id === habitId);
+        const targetCount = habit?.targetCount || 1;
+
+        if (existingIndex >= 0) {
+          const existingLog = state.logs[existingIndex];
+          const newCount = (existingLog.count || 0) + 1;
+          set((state) => ({
+            logs: state.logs.map((l, i) =>
+              i === existingIndex ? { ...l, count: newCount, status: 'completed' as const } : l
+            ),
+          }));
+          if (newCount >= targetCount) {
+            set((state) => {
+              const newXP = state.xp + 10;
+              return { xp: newXP, level: getLevelFromXP(newXP) };
+            });
           }
-
-          return {
+        } else {
+          set((state) => ({
             logs: [
               ...state.logs,
               { habitId, date, status: 'completed' as const, count: 1 },
             ],
-          };
-        });
+          }));
+          if (1 >= targetCount) {
+            set((state) => {
+              const newXP = state.xp + 10;
+              return { xp: newXP, level: getLevelFromXP(newXP) };
+            });
+          }
+        }
 
         try {
           const existingLog = get().logs.find(
             (l) => l.habitId === habitId && l.date === date
           );
           const count = (existingLog?.count || 0) + 1;
-          api.upsertLog(habitId, date, 'completed', count);
-        } catch {
-          // Queue for retry when online
-        }
+          api.upsertLog(habitId, date, 'completed', count).then(() => {
+            api.updateUserXP(get().xp, get().level).catch(() => {});
+          }).catch(() => {});
+        } catch {}
       },
 
       decrementHabitCount: (habitId: string, date: string) => {
-        set((state) => {
-          const existingIndex = state.logs.findIndex(
-            (l) => l.habitId === habitId && l.date === date
-          );
+        const state = get();
+        const existingIndex = state.logs.findIndex(
+          (l) => l.habitId === habitId && l.date === date
+        );
 
-          if (existingIndex >= 0) {
-            const existingLog = state.logs[existingIndex];
-            const newCount = (existingLog.count || 0) - 1;
+        if (existingIndex >= 0) {
+          const existingLog = state.logs[existingIndex];
+          const currentCount = existingLog.count ?? 0;
+          const newCount = currentCount - 1;
+          const habit = state.habits.find(h => h.id === habitId);
+          const targetCount = habit?.targetCount || 1;
 
-            if (newCount <= 0) {
-              return {
-                logs: state.logs.filter((l) => !(l.habitId === habitId && l.date === date)),
-              };
-            }
-
-            return {
-              logs: state.logs.map((l, i) =>
-                i === existingIndex ? { ...l, count: newCount } : l
-              ),
-            };
+          let xpChange = 0;
+          if (currentCount >= targetCount && newCount < targetCount) {
+            xpChange = -10;
           }
 
-          return state;
-        });
+          if (newCount <= 0) {
+            set((state) => {
+              const updates: Partial<HabitStore> = {
+                logs: state.logs.filter((l) => !(l.habitId === habitId && l.date === date)),
+              };
+              if (existingLog.status === 'completed') xpChange = -10;
+              if (xpChange !== 0) {
+                updates.xp = Math.max(0, state.xp + xpChange);
+                updates.level = getLevelFromXP(updates.xp);
+              }
+              return updates;
+            });
+          } else {
+            set((state) => {
+              const updates: Partial<HabitStore> = {
+                logs: state.logs.map((l, i) =>
+                  i === existingIndex ? { ...l, count: newCount } : l
+                ),
+              };
+              if (xpChange !== 0) {
+                updates.xp = Math.max(0, state.xp + xpChange);
+                updates.level = getLevelFromXP(updates.xp);
+              }
+              return updates;
+            });
+          }
+        }
 
         try {
           const existing = get().logs.find((l) => l.habitId === habitId && l.date === date);
@@ -300,19 +336,35 @@ export const useHabitStore = create<HabitStore>()(
               api.upsertLog(habitId, date, 'completed', newCount);
             }
           }
-        } catch {
-          // Queue for retry when online
-        }
+          api.updateUserXP(get().xp, get().level).catch(() => {});
+        } catch {}
       },
 
       addXP: (amount: number) => {
         set((state) => {
           const newXP = state.xp + amount;
-          const newLevel = getLevelFromXP(newXP);
-          return {
-            xp: newXP,
-            level: newLevel,
-          };
+          return { xp: newXP, level: getLevelFromXP(newXP) };
+        });
+
+        try {
+          api.updateUserXP(get().xp, get().level).catch(() => {});
+        } catch {}
+      },
+
+      setHabitTargetCount: async (habitId: string, targetCount: number) => {
+        set((state) => ({
+          habits: state.habits.map((h) => (h.id === habitId ? { ...h, targetCount } : h)),
+        }));
+        try {
+          await api.updateHabit(habitId, { targetCount });
+        } catch {}
+      },
+
+      setPomodoroSettings: (settings) => {
+        set((state) => {
+          const newSettings = { ...state.pomodoroSettings, ...settings };
+          savePomodoroSettings(newSettings);
+          return { pomodoroSettings: newSettings };
         });
       },
 
@@ -332,42 +384,27 @@ export const useHabitStore = create<HabitStore>()(
 
       exportData: () => {
         const state = get();
-        return {
-          habits: state.habits,
-          logs: state.logs,
-        };
+        return { habits: state.habits, logs: state.logs };
       },
 
       resetAll: async () => {
+        const previousHabits = get().habits;
         set({ habits: [], logs: [], xp: 0, level: 1 });
-
         try {
-          const { habits } = get();
-          await Promise.all(habits.map((h) => api.deleteHabit(h.id)));
-        } catch {
-          // Queue for retry when online
+          await Promise.all(previousHabits.map((h) => api.deleteHabit(h.id)));
+          api.updateUserXP(0, 1).catch(() => {});
+        } catch (e) {
+          console.error('resetAll API error:', e);
         }
       },
     }),
     {
       name: 'auratrack-storage',
       storage: customStorage,
-      partialize: (state) => ({
-        habits: state.habits,
-        logs: state.logs,
-        selectedDate: state.selectedDate,
-        xp: state.xp,
-        level: state.level,
-        pomodoroSettings: state.pomodoroSettings,
-      }),
       onRehydrateStorage: () => {
         return () => {
-          const lastSync = localStorage.getItem(SYNC_KEY);
-          const shouldSync = !lastSync || Date.now() - new Date(lastSync).getTime() > 60000;
-
-          if (shouldSync) {
-            syncFromServer();
-          }
+          // Don't sync here - causes circular reference issues
+          // Sync is handled explicitly after login
         };
       },
     }

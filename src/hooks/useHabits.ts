@@ -1,15 +1,33 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useHabitStore } from '@/store/useHabitStore';
 import { calculateStreak, getTodayStatus } from '@/lib/streak';
-import { HabitWithStreak } from '@/types';
+import { HabitWithStreak, Log } from '@/types';
+
+function isLogComplete(log: Log): boolean {
+  return log.status === 'completed' || Boolean(log.count && log.count > 0);
+}
+
+export function useHabitIds() {
+  return useHabitStore(useShallow((s) => s.habits.map((habit) => habit.id)));
+}
+
+export function useHabitByIdSimple(id: string) {
+  return useHabitStore(useShallow((s) => s.habits.find((h) => h.id === id)));
+}
+
+export function useHabitLogs(habitId: string) {
+  return useHabitStore(
+    useShallow((s) => s.logs.filter((log) => log.habitId === habitId))
+  );
+}
 
 export function useHabitsForDate(date: string): HabitWithStreak[] {
-  // Use a single selector + useMemo to avoid infinite loops
-  const habits = useHabitStore((s) => s.habits);
-  const logs = useHabitStore((s) => s.logs);
-  
+  const habits = useHabitStore(useShallow((s) => s.habits));
+  const logs = useHabitStore(useShallow((s) => s.logs));
+
   return useMemo(() => {
     return habits.map((habit) => ({
       ...habit,
@@ -20,43 +38,45 @@ export function useHabitsForDate(date: string): HabitWithStreak[] {
 }
 
 export function useHabitById(id: string, date: string): HabitWithStreak | undefined {
-  const habits = useHabitStore((s) => s.habits);
-  const logs = useHabitStore((s) => s.logs);
-  
+  const habit = useHabitByIdSimple(id);
+  const habitLogs = useHabitLogs(id);
+
   return useMemo(() => {
-    const habit = habits.find((h) => h.id === id);
     if (!habit) return undefined;
     return {
       ...habit,
-      streak: calculateStreak(logs, habit.id),
-      todayStatus: getTodayStatus(logs, habit.id, date),
+      streak: calculateStreak(habitLogs, habit.id),
+      todayStatus: getTodayStatus(habitLogs, habit.id, date),
     };
-  }, [habits, logs, id, date]);
+  }, [habit, habitLogs, date]);
 }
 
 export function useTodayCompletion(date: string) {
-  const habits = useHabitStore((s) => s.habits);
-  const logs = useHabitStore((s) => s.logs);
-  
-  return useMemo(() => {
-    if (habits.length === 0) return { completed: 0, total: 0, percentage: 0 };
+  const habitIds = useHabitIds();
+  const logsForDate = useHabitStore(
+    useShallow((s) => s.logs.filter((log) => log.date === date))
+  );
 
-    const completed = habits.filter((h) =>
-      logs.some((l) => l.habitId === h.id && l.date === date && l.status === 'completed')
-    ).length;
+  return useMemo(() => {
+    if (habitIds.length === 0) return { completed: 0, total: 0, percentage: 0 };
+
+    const completedHabitIds = new Set(
+      logsForDate.filter(isLogComplete).map((log) => log.habitId)
+    );
+    const completed = habitIds.filter((id) => completedHabitIds.has(id)).length;
 
     return {
       completed,
-      total: habits.length,
-      percentage: Math.round((completed / habits.length) * 100),
+      total: habitIds.length,
+      percentage: Math.round((completed / habitIds.length) * 100),
     };
-  }, [habits, logs, date]);
+  }, [habitIds, logsForDate]);
 }
 
 export function useWeeklyMomentum() {
-  const habits = useHabitStore((s) => s.habits);
-  const logs = useHabitStore((s) => s.logs);
-  
+  const habitIds = useHabitIds();
+  const logs = useHabitStore(useShallow((s) => s.logs));
+
   return useMemo(() => {
     const today = new Date();
     const dayOfWeek = today.getDay();
@@ -72,18 +92,19 @@ export function useWeeklyMomentum() {
       weekDates.add(d.toISOString().split('T')[0]);
     }
 
-    const totalPossible = habits.length * 7;
+    const totalPossible = habitIds.length * 7;
     if (totalPossible === 0) return 0;
 
+    const activeHabitIds = new Set(habitIds);
     const completed = logs.filter(
       (l) =>
-        l.status === 'completed' &&
-        habits.some((h) => h.id === l.habitId) &&
+        isLogComplete(l) &&
+        activeHabitIds.has(l.habitId) &&
         weekDates.has(l.date)
     ).length;
 
     return Math.round((completed / totalPossible) * 100);
-  }, [habits, logs]);
+  }, [habitIds, logs]);
 }
 
 export function useHabitCount() {
@@ -92,4 +113,21 @@ export function useHabitCount() {
 
 export function useSelectedDate() {
   return useHabitStore((s) => s.selectedDate);
+}
+
+export function useXP() {
+  return useHabitStore(useShallow((s) => ({ xp: s.xp, level: s.level })));
+}
+
+export function useHabitActions() {
+  return useHabitStore(
+    useShallow((s) => ({
+      markHabit: s.markHabit,
+      toggleHabit: s.toggleHabit,
+      incrementHabitCount: s.incrementHabitCount,
+      decrementHabitCount: s.decrementHabitCount,
+      deleteHabit: s.deleteHabit,
+      addXP: s.addXP,
+    }))
+  );
 }

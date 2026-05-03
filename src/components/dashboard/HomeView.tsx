@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import { useHabitStore } from '@/store/useHabitStore';
-import { useTodayCompletion } from '@/hooks/useHabits';
+import { useHabitIds, useTodayCompletion } from '@/hooks/useHabits';
 import { RibbonDatePicker } from './RibbonDatePicker';
 import { HabitBentoGrid } from './HabitBentoGrid';
 import { CircularProgressRing } from '@/components/analytics/CircularProgressRing';
@@ -17,7 +17,7 @@ interface HomeViewProps {
 
 export function HomeView({ onOpenSuggestions, onOpenDetail }: HomeViewProps) {
   const selectedDate = useHabitStore((s) => s.selectedDate);
-  const habits = useHabitStore((s) => s.habits);
+  const habitIds = useHabitIds();
   const completion = useTodayCompletion(selectedDate);
 
   const selectedDateObj = new Date(selectedDate);
@@ -28,15 +28,15 @@ export function HomeView({ onOpenSuggestions, onOpenDetail }: HomeViewProps) {
   });
 
   const handleCardClick = useCallback(() => {
-    if (habits.length === 0) {
+    if (habitIds.length === 0) {
       onOpenSuggestions();
     } else {
       onOpenSuggestions();
     }
-  }, [habits.length, onOpenSuggestions]);
+  }, [habitIds.length, onOpenSuggestions]);
 
   return (
-    <div className="space-y-6 pb-8 lg:pb-4">
+    <div className="space-y-6 pb-8 lg:pb-4 main-scroll-container">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Dashboard</h1>

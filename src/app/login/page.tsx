@@ -35,16 +35,19 @@ export default function LoginPage() {
         return;
       }
 
-      // Save user ID and force full reload so Zustand rehydrates from user-specific key
-      const { getSession } = await import('next-auth/react');
-      const checkSession = async () => {
-        const session = await getSession();
-        if (session?.user?.id) {
-          localStorage.setItem('auratrack-user-id', session.user.id);
-          window.location.href = '/';
-        }
-      };
-      setTimeout(checkSession, 500);
+      // Save user ID and sync from server
+        const { getSession } = await import('next-auth/react');
+        const checkSession = async () => {
+          const session = await getSession();
+          if (session?.user?.id) {
+            localStorage.setItem('auratrack-user-id', session.user.id);
+            // Import store and WAIT for sync to complete
+            const { useHabitStore } = await import('@/store/useHabitStore');
+            await useHabitStore.getState().syncFromServer().catch(() => {});
+            window.location.href = '/';
+          }
+        };
+        setTimeout(checkSession, 1000);
     } catch {
       setError('Something went wrong. Try again.');
     } finally {

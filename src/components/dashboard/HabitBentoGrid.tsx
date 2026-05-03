@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useEffect } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { useHabitsForDate, useTodayCompletion } from '@/hooks/useHabits';
+import { useHabitIds, useTodayCompletion } from '@/hooks/useHabits';
 import { SwipeableHabitCard } from './SwipeableHabitCard';
 import { HabitWithStreak } from '@/types';
 import { hapticVibrate } from '@/lib/haptics';
@@ -13,13 +13,13 @@ interface HabitBentoGridProps {
 }
 
 export function HabitBentoGrid({ date, onOpenDetail }: HabitBentoGridProps) {
-  const habits = useHabitsForDate(date);
+  const habitIds = useHabitIds();
   const completion = useTodayCompletion(date);
   const hasTriggeredRef = useRef(false);
   const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
-    if (habits.length > 0 && completion.percentage >= 100) {
+    if (habitIds.length > 0 && completion.percentage >= 100) {
       if (!hasTriggeredRef.current) {
         hasTriggeredRef.current = true;
         void triggerConfetti();
@@ -27,13 +27,13 @@ export function HabitBentoGrid({ date, onOpenDetail }: HabitBentoGridProps) {
     } else if (completion.percentage < 100) {
       hasTriggeredRef.current = false;
     }
-  }, [completion.percentage, habits.length]);
+  }, [completion.percentage, habitIds.length]);
 
   const handleComplete = useCallback(() => {
     hapticVibrate([10], 'habit-complete');
   }, []);
 
-  if (habits.length === 0) {
+  if (habitIds.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
@@ -50,18 +50,19 @@ export function HabitBentoGrid({ date, onOpenDetail }: HabitBentoGridProps) {
   const springConfig = shouldReduceMotion ? { duration: 0.1 } : { type: 'spring' as const, stiffness: 400, damping: 30 };
 
   return (
-    <div className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 gpu-accelerated">
+    <div className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 gpu-accelerated main-scroll-container">
       <AnimatePresence mode="popLayout">
-        {habits.map((habit) => (
+        {habitIds.map((habitId) => (
           <motion.div
-            key={habit.id}
+            key={habitId}
             initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
             transition={springConfig}
+            style={{ contentVisibility: 'auto', containIntrinsicSize: '0 80px' }}
           >
             <SwipeableHabitCard
-              habit={habit}
+              habitId={habitId}
               date={date}
               onOpenDetail={onOpenDetail}
               onComplete={handleComplete}
