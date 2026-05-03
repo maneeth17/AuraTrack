@@ -33,6 +33,40 @@ const customStorage = createJSONStorage(() => ({
   },
 }));
 
+// Pomodoro settings helpers
+function loadPomodoroSettings() {
+  if (typeof window === 'undefined') {
+    return {
+      focusDuration: 25 * 60,
+      shortBreak: 5 * 60,
+      longBreak: 15 * 60,
+      enabled: false,
+    };
+  }
+  try {
+    const saved = localStorage.getItem('auratrack-pomodoro-settings');
+    return saved ? JSON.parse(saved) : {
+      focusDuration: 25 * 60,
+      shortBreak: 5 * 60,
+      longBreak: 15 * 60,
+      enabled: false,
+    };
+  } catch {
+    return {
+      focusDuration: 25 * 60,
+      shortBreak: 5 * 60,
+      longBreak: 15 * 60,
+      enabled: false,
+    };
+  }
+}
+
+function savePomodoroSettings(settings: HabitStore['pomodoroSettings']) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('auratrack-pomodoro-settings', JSON.stringify(settings));
+  }
+}
+
 const syncFromServer = async () => {
   try {
     const [habits, logs] = await Promise.all([
@@ -53,11 +87,20 @@ export const useHabitStore = create<HabitStore>()(
       selectedDate: getTodayDate(),
       xp: 0,
       level: 1,
+      pomodoroSettings: loadPomodoroSettings(),
 
       syncFromServer,
 
       setSelectedDate: (date: string) => {
         set({ selectedDate: date });
+      },
+
+      setPomodoroSettings: (settings: Partial<HabitStore['pomodoroSettings']>) => {
+        set((state) => {
+          const newSettings = { ...state.pomodoroSettings, ...settings };
+          savePomodoroSettings(newSettings);
+          return { pomodoroSettings: newSettings };
+        });
       },
 
       addHabit: async (habit: Omit<Habit, 'id' | 'createdAt'>) => {
@@ -211,7 +254,11 @@ export const useHabitStore = create<HabitStore>()(
         });
 
         try {
-          api.upsertLog(habitId, date, 'completed');
+          const existingLog = get().logs.find(
+            (l) => l.habitId === habitId && l.date === date
+          );
+          const count = (existingLog?.count || 0) + 1;
+          api.upsertLog(habitId, date, 'completed', count);
         } catch {
           // Queue for retry when online
         }
@@ -311,6 +358,7 @@ export const useHabitStore = create<HabitStore>()(
         selectedDate: state.selectedDate,
         xp: state.xp,
         level: state.level,
+        pomodoroSettings: state.pomodoroSettings,
       }),
       onRehydrateStorage: () => {
         return () => {

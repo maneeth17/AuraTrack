@@ -49,6 +49,7 @@ export interface HabitStore {
   decrementHabitCount: (habitId: string, date: string) => void | Promise<void>;
   setHabitTargetCount: (habitId: string, targetCount: number) => void | Promise<void>;
   setSelectedDate: (date: string) => void;
+  setPomodoroSettings: (settings: Partial<{ focusDuration: number; shortBreak: number; longBreak: number; enabled: boolean }>) => void;
   importData: (data: { habits: Habit[]; logs: Log[] }) => void;
   exportData: () => { habits: Habit[]; logs: Log[] };
   resetAll: () => void | Promise<void>;
@@ -56,6 +57,12 @@ export interface HabitStore {
   level: number;
   addXP: (amount: number) => void;
   checkLevelUp: () => void;
+  pomodoroSettings: {
+    focusDuration: number;
+    shortBreak: number;
+    longBreak: number;
+    enabled: boolean;
+  };
 }
 
 export function getXPForLevel(level: number): number {
