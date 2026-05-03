@@ -6,8 +6,10 @@ import { useHabitStore } from '@/store/useHabitStore';
 import { calculateStreak, getTodayStatus } from '@/lib/streak';
 import { HabitWithStreak, Log } from '@/types';
 
-function isLogComplete(log: Log): boolean {
-  return log.status === 'completed' || Boolean(log.count && log.count > 0);
+function isLogComplete(log: Log, targetCount: number = 1): boolean {
+  if (log.status !== 'completed') return false;
+  if (log.count !== undefined && log.count < targetCount) return false;
+  return true;
 }
 
 export function useHabitIds() {
@@ -31,8 +33,8 @@ export function useHabitsForDate(date: string): HabitWithStreak[] {
   return useMemo(() => {
     return habits.map((habit) => ({
       ...habit,
-      streak: calculateStreak(logs, habit.id),
-      todayStatus: getTodayStatus(logs, habit.id, date),
+      streak: calculateStreak(logs, habit.id, habit.targetCount),
+      todayStatus: getTodayStatus(logs, habit.id, date, habit.targetCount),
     }));
   }, [habits, logs, date]);
 }
@@ -45,8 +47,8 @@ export function useHabitById(id: string, date: string): HabitWithStreak | undefi
     if (!habit) return undefined;
     return {
       ...habit,
-      streak: calculateStreak(habitLogs, habit.id),
-      todayStatus: getTodayStatus(habitLogs, habit.id, date),
+      streak: calculateStreak(habitLogs, habit.id, habit.targetCount),
+      todayStatus: getTodayStatus(habitLogs, habit.id, date, habit.targetCount),
     };
   }, [habit, habitLogs, date]);
 }
@@ -60,8 +62,13 @@ export function useTodayCompletion(date: string) {
   return useMemo(() => {
     if (habitIds.length === 0) return { completed: 0, total: 0, percentage: 0 };
 
+    const habitMap = new Map(habitIds.map(id => {
+      const habit = useHabitStore.getState().habits.find(h => h.id === id);
+      return [id, habit?.targetCount || 1] as [string, number];
+    }));
+
     const completedHabitIds = new Set(
-      logsForDate.filter(isLogComplete).map((log) => log.habitId)
+      logsForDate.filter(l => isLogComplete(l, habitMap.get(l.habitId))).map((log) => log.habitId)
     );
     const completed = habitIds.filter((id) => completedHabitIds.has(id)).length;
 
@@ -96,11 +103,16 @@ export function useWeeklyMomentum() {
     if (totalPossible === 0) return 0;
 
     const activeHabitIds = new Set(habitIds);
+    const habitMap = new Map(habitIds.map(id => {
+      const habit = useHabitStore.getState().habits.find(h => h.id === id);
+      return [id, habit?.targetCount || 1] as [string, number];
+    }));
+
     const completed = logs.filter(
       (l) =>
-        isLogComplete(l) &&
         activeHabitIds.has(l.habitId) &&
-        weekDates.has(l.date)
+        weekDates.has(l.date) &&
+        isLogComplete(l, habitMap.get(l.habitId))
     ).length;
 
     return Math.round((completed / totalPossible) * 100);

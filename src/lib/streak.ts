@@ -15,9 +15,9 @@ function daysBetween(dateA: Date, dateB: Date): number {
   return Math.round((utcB - utcA) / 86400000);
 }
 
-export function calculateStreak(logs: Log[], habitId: string): StreakData {
+export function calculateStreak(logs: Log[], habitId: string, targetCount: number = 1): StreakData {
   const completedDates = logs
-    .filter((l) => l.habitId === habitId && l.status === 'completed')
+    .filter((l) => l.habitId === habitId && l.status === 'completed' && (l.count === undefined || l.count >= targetCount))
     .map((l) => l.date)
     .filter((date, idx, arr) => arr.indexOf(date) === idx)
     .sort((a, b) => b.localeCompare(a));
@@ -80,13 +80,13 @@ export function calculateStreak(logs: Log[], habitId: string): StreakData {
   };
 }
 
-export function getConsistencyScoreWeighted(logs: Log[], habitId: string): number {
+export function getConsistencyScoreWeighted(logs: Log[], habitId: string, targetCount: number = 1): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const completedDates = new Set(
     logs
-      .filter((l) => l.habitId === habitId && l.status === 'completed')
+      .filter((l) => l.habitId === habitId && l.status === 'completed' && (l.count === undefined || l.count >= targetCount))
       .map((l) => l.date)
   );
 
@@ -107,9 +107,12 @@ export function getConsistencyScoreWeighted(logs: Log[], habitId: string): numbe
   return totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 100) : 0;
 }
 
-export function getTodayStatus(logs: Log[], habitId: string, date: string): 'completed' | 'skipped' | null {
+export function getTodayStatus(logs: Log[], habitId: string, date: string, targetCount: number = 1): 'completed' | 'skipped' | null {
   const log = logs.find((l) => l.habitId === habitId && l.date === date);
-  return log ? log.status : null;
+  if (!log) return null;
+  if (log.status !== 'completed') return log.status;
+  if (log.count !== undefined && log.count < targetCount) return null;
+  return log.status;
 }
 
 export function generateId(): string {
