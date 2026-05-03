@@ -191,9 +191,10 @@ export const useHabitStore = create<HabitStore>()(
           (l) => l.habitId === habitId && l.date === date
         );
 
+        const isUnchecking = existingIndex >= 0 && state.logs[existingIndex].status === 'completed';
         let xpChange = 0;
 
-        if (existingIndex >= 0 && state.logs[existingIndex].status === 'completed') {
+        if (isUnchecking) {
           // Unchecking
           set((state) => ({
             logs: [
@@ -219,16 +220,15 @@ export const useHabitStore = create<HabitStore>()(
         });
 
         try {
-          const existing = get().logs.find(
-            (l) => l.habitId === habitId && l.date === date
-          );
-          if (existing && existing.status === 'completed') {
+          if (isUnchecking) {
             await api.deleteLog(habitId, date);
           } else {
             await api.upsertLog(habitId, date, 'completed');
           }
           api.updateUserXP(get().xp, get().level).catch(() => {});
-        } catch {}
+        } catch (e) {
+          console.error('toggleHabit API error:', e);
+        }
       },
 
       incrementHabitCount: (habitId: string, date: string) => {
@@ -239,16 +239,18 @@ export const useHabitStore = create<HabitStore>()(
 
         const habit = state.habits.find(h => h.id === habitId);
         const targetCount = habit?.targetCount || 1;
+        let newCountForApi = 1;
 
         if (existingIndex >= 0) {
           const existingLog = state.logs[existingIndex];
           const newCount = (existingLog.count || 0) + 1;
+          newCountForApi = newCount;
           set((state) => ({
             logs: state.logs.map((l, i) =>
               i === existingIndex ? { ...l, count: newCount, status: 'completed' as const } : l
             ),
           }));
-          if (newCount >= targetCount) {
+          if (newCount >= targetCount && (existingLog.count || 0) < targetCount) {
             set((state) => {
               const newXP = state.xp + 10;
               return { xp: newXP, level: getLevelFromXP(newXP) };
@@ -270,14 +272,12 @@ export const useHabitStore = create<HabitStore>()(
         }
 
         try {
-          const existingLog = get().logs.find(
-            (l) => l.habitId === habitId && l.date === date
-          );
-          const count = (existingLog?.count || 0) + 1;
-          api.upsertLog(habitId, date, 'completed', count).then(() => {
+          api.upsertLog(habitId, date, 'completed', newCountForApi).then(() => {
             api.updateUserXP(get().xp, get().level).catch(() => {});
           }).catch(() => {});
-        } catch {}
+        } catch (e) {
+          console.error('incrementHabitCount API error:', e);
+        }
       },
 
       decrementHabitCount: (habitId: string, date: string) => {
@@ -303,7 +303,7 @@ export const useHabitStore = create<HabitStore>()(
               const updates: Partial<HabitStore> = {
                 logs: state.logs.filter((l) => !(l.habitId === habitId && l.date === date)),
               };
-              if (existingLog.status === 'completed') xpChange = -10;
+              if (existingLog.status === 'completed') xpChange -= 10;
               if (xpChange !== 0) {
                 updates.xp = Math.max(0, state.xp + xpChange);
                 updates.level = getLevelFromXP(updates.xp);
@@ -324,20 +324,21 @@ export const useHabitStore = create<HabitStore>()(
               return updates;
             });
           }
-        }
 
-        try {
-          const existing = get().logs.find((l) => l.habitId === habitId && l.date === date);
-          if (existing) {
-            const newCount = (existing.count || 0) - 1;
+          try {
             if (newCount <= 0) {
-              api.deleteLog(habitId, date);
+              api.deleteLog(habitId, date).then(() => {
+                api.updateUserXP(get().xp, get().level).catch(() => {});
+              }).catch(() => {});
             } else {
-              api.upsertLog(habitId, date, 'completed', newCount);
+              api.upsertLog(habitId, date, 'completed', newCount).then(() => {
+                api.updateUserXP(get().xp, get().level).catch(() => {});
+              }).catch(() => {});
             }
+          } catch (e) {
+            console.error('decrementHabitCount API error:', e);
           }
-          api.updateUserXP(get().xp, get().level).catch(() => {});
-        } catch {}
+        }
       },
 
       addXP: (amount: number) => {
