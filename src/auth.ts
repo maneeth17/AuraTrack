@@ -1,5 +1,5 @@
-import type { NextAuthConfig } from 'next-auth';
-import NextAuth from 'next-auth';
+import type { NextAuthOptions } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import Credentials from 'next-auth/providers/credentials';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { db } from '@/db';
@@ -24,7 +24,7 @@ if (isServer && db) {
   }
 }
 
-export const authOptions: NextAuthConfig = {
+export const authOptions: NextAuthOptions = {
   adapter,
   providers: [
     Credentials({
@@ -112,6 +112,4 @@ export const authOptions: NextAuthConfig = {
   },
 };
 
-export default authOptions;
-
-export const { handlers, auth, signIn, signOut } = NextAuth(authOptions);
+export const auth = () => getServerSession(authOptions);
