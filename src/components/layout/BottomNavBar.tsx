@@ -32,7 +32,7 @@ export const BottomNavBar = memo(function BottomNavBar({ activeTab, onTabChange,
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className={`relative flex flex-col items-center justify-center py-2 px-5 rounded-xl transition-all duration-200 ${
+                className={`relative flex flex-col items-center justify-center py-3 px-6 rounded-xl transition-all duration-200 min-h-[44px] min-w-[44px] ${
                   isActive ? 'text-accent' : 'text-white/40'
                 }`}
               >
@@ -54,7 +54,7 @@ export const BottomNavBar = memo(function BottomNavBar({ activeTab, onTabChange,
               whileTap={shouldReduceMotion ? undefined : { scale: 0.9 }}
               whileHover={shouldReduceMotion ? undefined : { scale: 1.05 }}
               onClick={onFabPress}
-              className="w-14 h-14 rounded-full bg-accent flex items-center justify-center shadow-glow-lg fab-glow"
+              className="w-14 h-14 rounded-full bg-accent flex items-center justify-center shadow-lg fab-glow min-h-[56px] min-w-[56px]"
             >
               <Plus className="w-7 h-7 text-white" />
             </motion.button>

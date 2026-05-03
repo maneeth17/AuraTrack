@@ -50,12 +50,11 @@ export function HabitBentoGrid({ date, onOpenDetail }: HabitBentoGridProps) {
   const springConfig = shouldReduceMotion ? { duration: 0.1 } : { type: 'spring' as const, stiffness: 400, damping: 30 };
 
   return (
-    <div className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+    <div className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 gpu-accelerated">
       <AnimatePresence mode="popLayout">
         {habits.map((habit) => (
           <motion.div
             key={habit.id}
-            layout
             initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}

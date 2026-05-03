@@ -11,14 +11,17 @@ export interface Habit {
   days: string[];
   color: string;
   icon: string;
-  createdAt: string;
   isFocusHabit?: boolean;
+  targetCount?: number;
+  currentCount?: number;
+  createdAt: string;
 }
 
 export interface Log {
   date: string;
   habitId: string;
   status: LogStatus;
+  count?: number;
 }
 
 export interface StreakData {
@@ -42,8 +45,29 @@ export interface HabitStore {
   deleteHabit: (id: string) => void | Promise<void>;
   markHabit: (habitId: string, date: string, status: LogStatus) => void | Promise<void>;
   toggleHabit: (habitId: string, date: string) => void | Promise<void>;
+  incrementHabitCount: (habitId: string, date: string) => void | Promise<void>;
+  decrementHabitCount: (habitId: string, date: string) => void | Promise<void>;
+  setHabitTargetCount: (habitId: string, targetCount: number) => void | Promise<void>;
   setSelectedDate: (date: string) => void;
   importData: (data: { habits: Habit[]; logs: Log[] }) => void;
   exportData: () => { habits: Habit[]; logs: Log[] };
   resetAll: () => void | Promise<void>;
+  xp: number;
+  level: number;
+  addXP: (amount: number) => void;
+  checkLevelUp: () => void;
+}
+
+export function getXPForLevel(level: number): number {
+  return level * 100;
+}
+
+export function getLevelFromXP(xp: number): number {
+  let level = 1;
+  let totalXP = 0;
+  while (totalXP + getXPForLevel(level) <= xp) {
+    totalXP += getXPForLevel(level);
+    level++;
+  }
+  return level;
 }

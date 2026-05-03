@@ -7,6 +7,7 @@ import { RibbonDatePicker } from './RibbonDatePicker';
 import { HabitBentoGrid } from './HabitBentoGrid';
 import { CircularProgressRing } from '@/components/analytics/CircularProgressRing';
 import { Calendar, Zap, ArrowRight } from 'lucide-react';
+import { LevelBar } from '@/components/common/LevelBar';
 import { HabitWithStreak } from '@/types';
 
 interface HomeViewProps {
@@ -30,10 +31,7 @@ export function HomeView({ onOpenSuggestions, onOpenDetail }: HomeViewProps) {
     if (habits.length === 0) {
       onOpenSuggestions();
     } else {
-      const el = document.getElementById('habits-list');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+      onOpenSuggestions();
     }
   }, [habits.length, onOpenSuggestions]);
 
@@ -52,6 +50,8 @@ export function HomeView({ onOpenSuggestions, onOpenDetail }: HomeViewProps) {
       </div>
 
       <RibbonDatePicker />
+
+      <LevelBar />
 
       <button
         onClick={handleCardClick}

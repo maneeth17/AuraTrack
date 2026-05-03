@@ -150,7 +150,7 @@ export function HabitSuggestions({ isOpen, onClose }: HabitSuggestionsProps) {
                   {selected.size > 0 ? (
                     <button
                       onClick={handleAddSelected}
-                      className="w-full btn-primary py-3.5 flex items-center justify-center gap-2"
+                      className="w-full btn-primary py-3 flex items-center justify-center gap-2"
                     >
                       <Check className="w-4 h-4" />
                       Add {selected.size} Habit{selected.size > 1 ? 's' : ''}

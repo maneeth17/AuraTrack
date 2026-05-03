@@ -38,7 +38,18 @@ body {
     text-wrap: balance;
   }
   .glass {
-    @apply backdrop-blur-md bg-white/5 border border-white/10;
+    @apply bg-white/5 border border-white/10;
+  }
+  .glass-blur {
+    @apply backdrop-blur-md;
+  }
+  /* Pillar 4: Hardware acceleration for smooth scrolling */
+  .gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+  .disable-backdrop-filter {
+    backdrop-filter: none !important;
   }
   .glass-hover {
     @apply hover:bg-white/10 hover:border-white/15 transition-all duration-200;
@@ -62,11 +73,45 @@ body {
   .safe-top {
     padding-top: env(safe-area-inset-top, 0px);
   }
+  
+  /* Mobile-friendly improvements */
+  .min-touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Prevent zoom on focus for inputs on mobile */
+  @media screen and (max-width: 768px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+  }
+  
+  /* Better tap targets on mobile */
+  @media (hover: none) and (pointer: coarse) {
+    button, 
+    [role="button"],
+    a {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+  
+  /* Prevent text overflow on mobile */
+  .mobile-text-fix {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
 }
 
 @layer components {
   .bento-card {
-    @apply glass rounded-2xl p-4 glass-hover;
+    @apply glass rounded-2xl p-4 glass-hover min-h-[120px];
   }
   .btn-primary {
     @apply bg-accent/20 text-accent border border-accent/30 rounded-xl px-4 py-2.5 
@@ -77,6 +122,6 @@ body {
              font-medium transition-all duration-200 active:scale-95 hover:bg-danger/30;
   }
   .fab-glow {
-    @apply animate-glow-pulse shadow-glow-lg;
+    @apply shadow-glow-lg hover:shadow-glow transition-shadow duration-300;
   }
 }

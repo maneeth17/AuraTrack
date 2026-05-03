@@ -6,9 +6,10 @@ import { calculateStreak, getTodayStatus } from '@/lib/streak';
 import { HabitWithStreak } from '@/types';
 
 export function useHabitsForDate(date: string): HabitWithStreak[] {
+  // Use a single selector + useMemo to avoid infinite loops
   const habits = useHabitStore((s) => s.habits);
   const logs = useHabitStore((s) => s.logs);
-
+  
   return useMemo(() => {
     return habits.map((habit) => ({
       ...habit,
@@ -21,7 +22,7 @@ export function useHabitsForDate(date: string): HabitWithStreak[] {
 export function useHabitById(id: string, date: string): HabitWithStreak | undefined {
   const habits = useHabitStore((s) => s.habits);
   const logs = useHabitStore((s) => s.logs);
-
+  
   return useMemo(() => {
     const habit = habits.find((h) => h.id === id);
     if (!habit) return undefined;
@@ -36,7 +37,7 @@ export function useHabitById(id: string, date: string): HabitWithStreak | undefi
 export function useTodayCompletion(date: string) {
   const habits = useHabitStore((s) => s.habits);
   const logs = useHabitStore((s) => s.logs);
-
+  
   return useMemo(() => {
     if (habits.length === 0) return { completed: 0, total: 0, percentage: 0 };
 
@@ -55,7 +56,7 @@ export function useTodayCompletion(date: string) {
 export function useWeeklyMomentum() {
   const habits = useHabitStore((s) => s.habits);
   const logs = useHabitStore((s) => s.logs);
-
+  
   return useMemo(() => {
     const today = new Date();
     const dayOfWeek = today.getDay();

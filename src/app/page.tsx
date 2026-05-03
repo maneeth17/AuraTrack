@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
 import nextDynamic from 'next/dynamic';
 import { HomeView } from '@/components/dashboard/HomeView';
@@ -8,11 +10,10 @@ import { AddHabitSheet } from '@/components/common/AddHabitSheet';
 import { DesktopSidebar } from '@/components/layout/DesktopSidebar';
 import { HabitSuggestions } from '@/components/dashboard/HabitSuggestions';
 import { HabitDetailSheet } from '@/components/dashboard/SwipeableHabitCard';
+import { PomodoroTimer } from '@/components/focus/PomodoroTimer';
 import { useHabitStore } from '@/store/useHabitStore';
 import { useHabitsForDate } from '@/hooks/useHabits';
 import { Habit, HabitWithStreak } from '@/types';
-
-export const dynamic = 'force-dynamic';
 
 const StatsView = nextDynamic(() => import('@/components/analytics/StatsView').then((m) => ({ default: m.StatsView })), {
   ssr: false,
@@ -60,6 +61,13 @@ function DashboardContent() {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [selectedDetailHabit, setSelectedDetailHabit] = useState<HabitWithStreak | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [pomodoroProps, setPomodoroProps] = useState<{
+    habitId: string;
+    habitTitle: string;
+    habitColor: string;
+    onComplete: () => void;
+    onClose: () => void;
+  } | null>(null);
 
   const selectedDate = useHabitStore((s) => s.selectedDate);
   const setSelectedDate = useHabitStore((s) => s.setSelectedDate);
@@ -80,11 +88,23 @@ function DashboardContent() {
         useHabitStore.getState().deleteHabit(habitId);
       }
     };
+    const handleShowPomodoro = (e: Event) => {
+      const detail = (e as CustomEvent).detail as {
+        habitId: string;
+        habitTitle: string;
+        habitColor: string;
+        onComplete: () => void;
+        onClose: () => void;
+      };
+      setPomodoroProps(detail);
+    };
     window.addEventListener('open-add-habit', handleOpenAddHabit);
     window.addEventListener('delete-habit', handleDeleteHabit);
+    window.addEventListener('show-pomodoro', handleShowPomodoro);
     return () => {
       window.removeEventListener('open-add-habit', handleOpenAddHabit);
       window.removeEventListener('delete-habit', handleDeleteHabit);
+      window.removeEventListener('show-pomodoro', handleShowPomodoro);
     };
   }, []);
 
@@ -168,6 +188,19 @@ function DashboardContent() {
         }}
         onEdit={handleEditHabit}
       />
+
+      {pomodoroProps && (
+        <PomodoroTimer
+          habitId={pomodoroProps.habitId}
+          habitTitle={pomodoroProps.habitTitle}
+          habitColor={pomodoroProps.habitColor}
+          onComplete={pomodoroProps.onComplete}
+          onClose={() => {
+            pomodoroProps.onClose();
+            setPomodoroProps(null);
+          }}
+        />
+      )}
     </>
   );
 }

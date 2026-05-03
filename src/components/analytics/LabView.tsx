@@ -127,6 +127,66 @@ export const LabView = memo(function LabView() {
           </div>
         </div>
       )}
+
+      {analysis.weekendSlump && (
+        <div className="bento-card border-blue-500/20">
+          <div className="flex items-center gap-2 mb-4">
+            <Calendar className="w-5 h-5 text-blue-400" />
+            <h3 className="text-sm font-semibold text-white/80">Weekend Slump Detected</h3>
+          </div>
+          <div className="space-y-3">
+            <div className="p-3 rounded-xl bg-blue-500/5">
+              <p className="text-sm text-white/70">
+                Your completion rate drops on weekends. Weekday: {Math.round(analysis.weekendSlump.weekdayRate * 100)}% vs Weekend: {Math.round(analysis.weekendSlump.weekendRate * 100)}%
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {analysis.chainReaction && analysis.chainReaction.length > 0 && (
+        <div className="bento-card border-purple-500/20">
+          <div className="flex items-center gap-2 mb-4">
+            <Link2 className="w-5 h-5 text-purple-400" />
+            <h3 className="text-sm font-semibold text-white/80">Chain Reaction</h3>
+          </div>
+          <p className="text-xs text-white/40 mb-3">Missing these habits often leads to missing others</p>
+          <div className="space-y-3">
+            {analysis.chainReaction.map((item, index) => (
+              <div key={index} className="flex items-center gap-3 p-3 rounded-xl bg-purple-500/5">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white/80 truncate">{item.habitTitle}</p>
+                  <p className="text-xs text-white/40">
+                    When missed, you miss {item.avgOthersMissed.toFixed(1)} other habits
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {analysis.adviceCards && analysis.adviceCards.length > 0 && (
+        <div className="bento-card border-emerald-500/20">
+          <div className="flex items-center gap-2 mb-4">
+            <AlertCircle className="w-5 h-5 text-emerald-400" />
+            <h3 className="text-sm font-semibold text-white/80">AI Advice</h3>
+          </div>
+          <div className="space-y-3">
+            {analysis.adviceCards.map((card, index) => (
+              <div key={index} className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                <div className="flex items-start gap-3">
+                  <span className="text-lg">{card.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white/80 mb-1">{card.title}</p>
+                    <p className="text-xs text-white/50">{card.message}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 });

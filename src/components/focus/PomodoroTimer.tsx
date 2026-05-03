@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, Square, Timer, X } from 'lucide-react';
 
@@ -33,20 +33,31 @@ export function PomodoroTimer({ habitId, habitTitle, habitColor, onComplete, onC
 
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Restore timer state from localStorage only once on mount
   useEffect(() => {
     const saved = localStorage.getItem(`pomodoro-${habitId}`);
     if (saved) {
-      const { endTime: savedEnd, phase: savedPhase, sessions } = JSON.parse(saved);
-      const remaining = Math.max(0, Math.ceil((savedEnd - Date.now()) / 1000));
-      if (remaining > 0) {
-        setEndTime(savedEnd);
-        setPhase(savedPhase);
-        setTimeLeft(remaining);
-        setSessionsCompleted(sessions);
-        setIsRunning(true);
+      try {
+        const { endTime: savedEnd, phase: savedPhase, sessions } = JSON.parse(saved);
+        if (savedEnd && typeof savedEnd === 'number') {
+          const remaining = Math.max(0, Math.ceil((savedEnd - Date.now()) / 1000));
+          if (remaining > 0) {
+            setEndTime(savedEnd);
+            setPhase(savedPhase || 'focus');
+            setTimeLeft(remaining);
+            setSessionsCompleted(sessions || 0);
+            setIsRunning(true);
+          } else {
+            localStorage.removeItem(`pomodoro-${habitId}`);
+          }
+        }
+      } catch {
+        localStorage.removeItem(`pomodoro-${habitId}`);
       }
     }
-  }, [habitId]);
+    // Only run on mount, not when habitId changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handlePhaseComplete = useCallback(() => {
     if (tickRef.current) clearInterval(tickRef.current);
@@ -80,17 +91,23 @@ export function PomodoroTimer({ habitId, habitTitle, habitColor, onComplete, onC
     localStorage.removeItem(`pomodoro-${habitId}`);
   }, [phase, sessionsCompleted, habitId, onComplete]);
 
+  // Timer tick - only depend on endTime and isRunning
   useEffect(() => {
-    if (endTime && isRunning) {
-      tickRef.current = setInterval(() => {
-        const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
-        setTimeLeft(remaining);
+    if (!endTime || !isRunning) return;
 
-        if (remaining === 0) {
-          handlePhaseComplete();
-        }
-      }, 250);
-    }
+    const updateTime = () => {
+      const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+      setTimeLeft(remaining);
+
+      if (remaining === 0) {
+        handlePhaseComplete();
+      }
+    };
+
+    // Update immediately
+    updateTime();
+
+    tickRef.current = setInterval(updateTime, 1000);
 
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
@@ -108,7 +125,7 @@ export function PomodoroTimer({ habitId, habitTitle, habitColor, onComplete, onC
     if (tickRef.current) clearInterval(tickRef.current);
     setIsRunning(false);
     setEndTime(null);
-    localStorage.setItem(`pomodoro-${habitId}`, JSON.stringify({ endTime: null, phase, sessions: sessionsCompleted, timeLeft }));
+    localStorage.setItem(`pomodoro-${habitId}`, JSON.stringify({ endTime: Date.now() + (timeLeft * 1000), phase, sessions: sessionsCompleted, timeLeft }));
   };
 
   const handleCancel = () => {
@@ -130,10 +147,14 @@ export function PomodoroTimer({ habitId, habitTitle, habitColor, onComplete, onC
     localStorage.removeItem(`pomodoro-${habitId}`);
   };
 
-  const progress = phase === 'focus' ? ((FOCUS_DURATION - timeLeft) / FOCUS_DURATION) * 100 : phase === 'shortBreak' ? ((SHORT_BREAK - timeLeft) / SHORT_BREAK) * 100 : ((LONG_BREAK - timeLeft) / LONG_BREAK) * 100;
-
-  const circumference = 2 * Math.PI * 54;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
+  // Memoize expensive calculations
+  const { circumference, strokeDashoffset } = useMemo(() => {
+    const totalTime = phase === 'focus' ? FOCUS_DURATION : phase === 'shortBreak' ? SHORT_BREAK : LONG_BREAK;
+    const pct = ((totalTime - timeLeft) / totalTime) * 100;
+    const circ = 2 * Math.PI * 54;
+    const offset = circ - (pct / 100) * circ;
+    return { circumference: circ, strokeDashoffset: offset };
+  }, [phase, timeLeft]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -143,8 +164,8 @@ export function PomodoroTimer({ habitId, habitTitle, habitColor, onComplete, onC
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         className="glass rounded-3xl border border-white/10 p-8 w-full max-w-sm shadow-2xl relative"
       >
-        <button onClick={handleCancel} className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-          <X className="w-4 h-4 text-white/60" />
+        <button onClick={handleCancel} className="absolute top-4 right-4 min-h-[44px] min-w-[44px] rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
+          <X className="w-5 h-5 text-white/60" />
         </button>
 
         <div className="text-center mb-6">

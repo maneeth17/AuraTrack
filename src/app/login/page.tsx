@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
+
+export const dynamic = 'force-dynamic';
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -14,7 +15,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,8 +35,16 @@ export default function LoginPage() {
         return;
       }
 
-      router.push('/');
-      router.refresh();
+      // Save user ID and force full reload so Zustand rehydrates from user-specific key
+      const { getSession } = await import('next-auth/react');
+      const checkSession = async () => {
+        const session = await getSession();
+        if (session?.user?.id) {
+          localStorage.setItem('auratrack-user-id', session.user.id);
+          window.location.href = '/';
+        }
+      };
+      setTimeout(checkSession, 500);
     } catch {
       setError('Something went wrong. Try again.');
     } finally {
@@ -132,7 +140,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-primary py-3.5 flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -147,6 +155,7 @@ export default function LoginPage() {
 
           <div className="mt-6 pt-4 border-t border-white/5">
             <button
+              type="button"
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError('');

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/auth';
 import { db } from '@/db';
 import { logs, habits } from '@/db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
-import { auth } from '@/auth';
+import { eq, and } from 'drizzle-orm';
 
 async function getUserHabitIds(userId: string): Promise<string[]> {
   if (!db) return [];
@@ -10,33 +11,28 @@ async function getUserHabitIds(userId: string): Promise<string[]> {
   return userHabits.map((h) => h.id);
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     if (!db) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
     }
-    const session = await auth();
+    
+    const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const userHabitIds = await getUserHabitIds(session.user.id);
-    if (userHabitIds.length === 0) {
-      return NextResponse.json({ logs: [] });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const habitId = searchParams.get('habitId');
-
-    let allLogs;
-    if (habitId) {
-      allLogs = await db.select().from(logs).where(eq(logs.habitId, habitId));
-    } else {
-      allLogs = await db.select().from(logs).where(inArray(logs.habitId, userHabitIds));
-    }
-
-    return NextResponse.json({ logs: allLogs });
-  } catch {
+    
+    const logsData = userHabitIds.length > 0
+      ? await db.query.logs.findMany({
+          where: (logs, { inArray }) => inArray(logs.habitId, userHabitIds),
+        })
+      : [];
+    
+    return NextResponse.json({ logs: logsData });
+  } catch (error) {
+    console.error('GET /api/logs error:', error);
     return NextResponse.json({ error: 'Failed to fetch logs' }, { status: 500 });
   }
 }
@@ -46,44 +42,118 @@ export async function POST(request: NextRequest) {
     if (!db) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
     }
-    const session = await auth();
+
+    const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    const { habitId, date, status } = body;
-
-    const habit = await db.select({ id: habits.id }).from(habits).where(and(eq(habits.id, habitId), eq(habits.userId, session.user.id))).limit(1);
+    
+    // Verify the habit belongs to the user
+    const habit = await db
+      .select({ id: habits.id })
+      .from(habits)
+      .where(and(eq(habits.id, body.habitId), eq(habits.userId, session.user.id)))
+      .limit(1);
+    
     if (!habit.length) {
       return NextResponse.json({ error: 'Habit not found' }, { status: 404 });
     }
 
-    const existing = await db.select().from(logs).where(and(eq(logs.habitId, habitId), eq(logs.date, date)));
+    // Check if log already exists for this habit + date
+    const existing = await db
+      .select()
+      .from(logs)
+      .where(and(eq(logs.habitId, body.habitId), eq(logs.date, body.date)))
+      .limit(1);
 
     if (existing.length > 0) {
-      if (existing[0].status === status) {
-        await db.delete(logs).where(and(eq(logs.habitId, habitId), eq(logs.date, date)));
-        return NextResponse.json({ success: true, action: 'removed' });
-      } else {
-        const updated = await db.update(logs)
-          .set({ status })
-          .where(and(eq(logs.habitId, habitId), eq(logs.date, date)))
-          .returning();
-        return NextResponse.json({ log: updated[0], action: 'updated' });
-      }
+      // Update existing log
+      const updated = await db
+        .update(logs)
+        .set({
+          status: body.status || existing[0].status,
+          count: body.count ?? existing[0].count,
+        })
+        .where(and(eq(logs.habitId, body.habitId), eq(logs.date, body.date)))
+        .returning();
+      return NextResponse.json({ log: updated[0] });
     }
 
+    // Create new log
     const newLog = await db.insert(logs).values({
-      id: `${habitId}-${date}`,
-      habitId,
-      date,
-      status,
+      id: crypto.randomUUID(),
+      habitId: body.habitId,
+      date: body.date,
+      status: body.status || 'completed',
+      count: body.count || 0,
     }).returning();
 
-    return NextResponse.json({ log: newLog[0], action: 'created' }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: 'Failed to create log' }, { status: 500 });
+    return NextResponse.json({ log: newLog[0] }, { status: 201 });
+  } catch (error: unknown) {
+    console.error('POST /api/logs error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to create log';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    if (!db) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
+
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { habitId, date, ...updates } = body;
+
+    if (!habitId || !date) {
+      return NextResponse.json({ error: 'Missing habitId or date' }, { status: 400 });
+    }
+
+    // Verify the habit belongs to the user
+    const habit = await db
+      .select({ id: habits.id })
+      .from(habits)
+      .where(and(eq(habits.id, habitId), eq(habits.userId, session.user.id)))
+      .limit(1);
+
+    if (!habit.length) {
+      return NextResponse.json({ error: 'Habit not found' }, { status: 404 });
+    }
+
+    const existing = await db
+      .select()
+      .from(logs)
+      .where(and(eq(logs.habitId, habitId), eq(logs.date, date)))
+      .limit(1);
+
+    if (existing.length >0) {
+      const updated = await db
+        .update(logs)
+        .set(updates)
+        .where(and(eq(logs.habitId, habitId), eq(logs.date, date)))
+        .returning();
+      return NextResponse.json({ log: updated[0] });
+    } else {
+      const newLog = await db.insert(logs).values({
+        id: crypto.randomUUID(),
+        habitId,
+        date,
+        status: updates.status || 'completed',
+        count: updates.count || 0,
+      }).returning();
+      return NextResponse.json({ log: newLog[0] }, { status: 201 });
+    }
+  } catch (error: unknown) {
+    console.error('PUT /api/logs error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to update log';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -92,7 +162,8 @@ export async function DELETE(request: NextRequest) {
     if (!db) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
     }
-    const session = await auth();
+    
+    const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -100,14 +171,30 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const habitId = searchParams.get('habitId');
     const date = searchParams.get('date');
-
+    
     if (!habitId || !date) {
       return NextResponse.json({ error: 'Missing habitId or date' }, { status: 400 });
     }
 
-    await db.delete(logs).where(and(eq(logs.habitId, habitId), eq(logs.date, date)));
+    // Verify the habit belongs to the user
+    const habit = await db
+      .select({ id: habits.id })
+      .from(habits)
+      .where(and(eq(habits.id, habitId), eq(habits.userId, session.user.id)))
+      .limit(1);
+
+    if (!habit.length) {
+      return NextResponse.json({ error: 'Habit not found' }, { status: 404 });
+    }
+
+    await db
+      .delete(logs)
+      .where(and(eq(logs.habitId, habitId), eq(logs.date, date)));
+    
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: 'Failed to delete log' }, { status: 500 });
+  } catch (error: unknown) {
+    console.error('DELETE /api/logs error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to delete log';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

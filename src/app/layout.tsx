@@ -3,6 +3,10 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { ServiceWorkerRegistration } from "@/components/common/ServiceWorkerRegistration";
 import { PWAInstallPrompt } from "@/components/common/PWAInstallPrompt";
+import { ThemeProvider } from "@/components/common/ThemeProvider";
+import { LevelUpOverlay } from "@/components/common/LevelUpOverlay";
+
+export const dynamic = 'force-dynamic';
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -54,9 +58,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
-        <ServiceWorkerRegistration />
-        <PWAInstallPrompt />
+        <ThemeProvider>
+          {children}
+          <LevelUpOverlay />
+          <ServiceWorkerRegistration />
+          <PWAInstallPrompt />
+        </ThemeProvider>
       </body>
     </html>
   );

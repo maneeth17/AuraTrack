@@ -17,6 +17,7 @@ export function SettingsView() {
   const [shareLoading, setShareLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState('');
+  const [shareError, setShareError] = useState<string | null>(null);
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -64,25 +65,41 @@ export function SettingsView() {
 
   const handleGenerateShare = useCallback(async () => {
     setShareLoading(true);
+    setShareError(null);
+    console.log('Share: Attempting to generate share link...');
+    
     try {
-      const res = await fetch('/api/share', { method: 'POST' });
+      const res = await fetch('/api/share', { 
+        method: 'POST', 
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      console.log('Share API response status:', res.status);
       if (res.ok) {
         const data = await res.json();
+        console.log('Share API success:', data);
         setShareId(data.shareId);
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        setShareError(errorData.error || `Server error: ${res.status}`);
+        console.error('Share API error:', res.status, errorData);
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      setShareError('Network error - please try again');
+      console.error('Share API fetch error:', err);
     }
     setShareLoading(false);
   }, []);
 
   const handleCopyShareLink = useCallback(() => {
     if (!shareId) return;
-    const url = `${window.location.origin}/share/${shareId}`;
+    const url = `${origin}/share/${shareId}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }, [shareId]);
+  }, [shareId, origin]);
 
   return (
     <div className="space-y-6 pb-8 lg:pb-4">
@@ -143,6 +160,9 @@ export function SettingsView() {
 
         <div className="bento-card">
           <h3 className="text-sm font-semibold text-white/80 mb-4">Share Progress</h3>
+          {shareError && (
+            <p className="text-xs text-danger mb-3">{shareError}</p>
+          )}
           <div className="space-y-3">
             {!shareId ? (
               <button
@@ -157,7 +177,7 @@ export function SettingsView() {
                 </div>
               </button>
             ) : (
-              <div className="space-y-3">
+              <>
                 <button
                   onClick={handleCopyShareLink}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-accent/10 border border-accent/20 hover:bg-accent/20 transition-all text-left"
@@ -183,7 +203,7 @@ export function SettingsView() {
                     <p className="text-xs text-white/40">Create a new share ID</p>
                   </div>
                 </button>
-              </div>
+              </>
             )}
           </div>
         </div>
@@ -218,16 +238,13 @@ export function SettingsView() {
 
       <div className="bento-card">
         <button
-          onClick={() => {
-            useHabitStore.getState().resetAll();
-            signOut({ callbackUrl: '/login' });
-          }}
+          onClick={() => signOut({ callbackUrl: '/login' })}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-danger/10 border border-danger/20 hover:bg-danger/20 transition-all"
         >
           <LogOut className="w-5 h-5 text-danger shrink-0" />
           <div className="text-left">
             <p className="text-sm text-danger font-medium">Sign Out</p>
-            <p className="text-xs text-white/40">Clear local data and sign out</p>
+            <p className="text-xs text-white/40">Your data is saved in the cloud</p>
           </div>
         </button>
       </div>

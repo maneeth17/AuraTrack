@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { HabitStore, Habit, Log, LogStatus } from '@/types';
 import { generateId } from '@/lib/streak';
 import * as api from '@/lib/api';
+import { getLevelFromXP } from '@/types';
 
 function getTodayDate(): string {
   if (typeof window === 'undefined') return '2024-01-01';
@@ -11,86 +12,38 @@ function getTodayDate(): string {
 
 const SYNC_KEY = 'auratrack-last-sync';
 
-function throttle(fn: () => void, delay: number) {
-  let last = 0;
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  return function throttled() {
-    const now = Date.now();
-    if (now - last >= delay) {
-      last = now;
-      fn();
-    } else if (!timer) {
-      timer = setTimeout(() => {
-        last = Date.now();
-        timer = null;
-        fn();
-      }, delay - (now - last));
-    }
-  };
+function getStorageKey(): string {
+  if (typeof window === 'undefined') return 'auratrack-storage-guest';
+  const userId = localStorage.getItem('auratrack-user-id') || 'guest';
+  return `auratrack-storage-${userId}`;
 }
 
-const pendingWrites = new Set<string>();
-let isScheduled = false;
+const customStorage = createJSONStorage(() => ({
+  getItem: () => {
+    const key = getStorageKey();
+    return localStorage.getItem(key);
+  },
+  setItem: (_name: string, value: string) => {
+    const key = getStorageKey();
+    localStorage.setItem(key, value);
+  },
+  removeItem: () => {
+    const key = getStorageKey();
+    localStorage.removeItem(key);
+  },
+}));
 
-const flushWrites = throttle(() => {
-  const toWrite = Array.from(pendingWrites);
-  pendingWrites.clear();
-  isScheduled = false;
-
-  const data = useHabitStore.getState();
-  const serialized = JSON.stringify({
-    state: {
-      habits: data.habits,
-      logs: data.logs,
-      selectedDate: data.selectedDate,
-    },
-    version: 0,
-  });
-
-  for (const key of toWrite) {
-    try {
-      localStorage.setItem(key, serialized);
-    } catch {
-      // Storage full — silently fail
-    }
-  }
-}, 2000);
-
-function throttledStorage() {
-  const base = createJSONStorage(() => localStorage)!;
-
-  return {
-    ...base,
-    setItem: (name: string, value: never) => {
-      pendingWrites.add(name);
-      if (!isScheduled) {
-        isScheduled = true;
-      }
-      flushWrites();
-      base.setItem(name, value);
-    },
-  } as ReturnType<typeof createJSONStorage>;
-}
-
-async function syncFromServer() {
+const syncFromServer = async () => {
   try {
     const [habits, logs] = await Promise.all([
       api.fetchHabits(),
       api.fetchLogs(),
     ]);
-
-    const { habits: localHabits, importData } = useHabitStore.getState();
-
-    if (habits.length > 0 || localHabits.length === 0) {
-      importData({ habits, logs });
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(SYNC_KEY, new Date().toISOString());
-      }
-    }
-  } catch {
-    // Offline: use cached localStorage data
+    useHabitStore.setState({ habits, logs });
+  } catch (error) {
+    console.error('Failed to sync from server:', error);
   }
-}
+};
 
 export const useHabitStore = create<HabitStore>()(
   persist(
@@ -98,8 +51,14 @@ export const useHabitStore = create<HabitStore>()(
       habits: [],
       logs: [],
       selectedDate: getTodayDate(),
+      xp: 0,
+      level: 1,
 
       syncFromServer,
+
+      setSelectedDate: (date: string) => {
+        set({ selectedDate: date });
+      },
 
       addHabit: async (habit: Omit<Habit, 'id' | 'createdAt'>) => {
         const newHabit: Habit = {
@@ -129,6 +88,20 @@ export const useHabitStore = create<HabitStore>()(
         }
       },
 
+      setHabitTargetCount: (id: string, targetCount: number) => {
+        set((state) => ({
+          habits: state.habits.map((h) =>
+            h.id === id ? { ...h, targetCount } : h
+          ),
+        }));
+
+        try {
+          api.updateHabit(id, { targetCount } as Partial<Habit>);
+        } catch {
+          // Queue for retry when online
+        }
+      },
+
       deleteHabit: async (id: string) => {
         set((state) => ({
           habits: state.habits.filter((h) => h.id !== id),
@@ -136,7 +109,7 @@ export const useHabitStore = create<HabitStore>()(
         }));
 
         try {
-          await api.deleteHabit(id);
+          api.deleteHabit(id);
         } catch {
           // Queue for retry when online
         }
@@ -170,7 +143,7 @@ export const useHabitStore = create<HabitStore>()(
         });
 
         try {
-          await api.upsertLog(habitId, date, status);
+          api.upsertLog(habitId, date, status);
         } catch {
           // Queue for retry when online
         }
@@ -193,26 +166,117 @@ export const useHabitStore = create<HabitStore>()(
 
           return {
             logs: [
-              ...state.logs.filter((l) => !(l.habitId === habitId && l.date === date)),
+              ...state.logs,
               { habitId, date, status: 'completed' as const },
             ],
           };
         });
 
         try {
-          const existing = get().logs.find((l) => l.habitId === habitId && l.date === date);
+          const existing = get().logs.find(
+            (l) => l.habitId === habitId && l.date === date
+          );
           if (existing && existing.status === 'completed') {
-            await api.deleteLog(habitId, date);
+            api.deleteLog(habitId, date);
           } else {
-            await api.upsertLog(habitId, date, 'completed');
+            api.upsertLog(habitId, date, 'completed');
           }
         } catch {
           // Queue for retry when online
         }
       },
 
-      setSelectedDate: (date: string) => {
-        set({ selectedDate: date });
+      incrementHabitCount: (habitId: string, date: string) => {
+        set((state) => {
+          const existingIndex = state.logs.findIndex(
+            (l) => l.habitId === habitId && l.date === date
+          );
+
+          if (existingIndex >= 0) {
+            const existingLog = state.logs[existingIndex];
+            const newCount = (existingLog.count || 0) + 1;
+            return {
+              logs: state.logs.map((l, i) =>
+                i === existingIndex ? { ...l, count: newCount, status: 'completed' as const } : l
+              ),
+            };
+          }
+
+          return {
+            logs: [
+              ...state.logs,
+              { habitId, date, status: 'completed' as const, count: 1 },
+            ],
+          };
+        });
+
+        try {
+          api.upsertLog(habitId, date, 'completed');
+        } catch {
+          // Queue for retry when online
+        }
+      },
+
+      decrementHabitCount: (habitId: string, date: string) => {
+        set((state) => {
+          const existingIndex = state.logs.findIndex(
+            (l) => l.habitId === habitId && l.date === date
+          );
+
+          if (existingIndex >= 0) {
+            const existingLog = state.logs[existingIndex];
+            const newCount = (existingLog.count || 0) - 1;
+
+            if (newCount <= 0) {
+              return {
+                logs: state.logs.filter((l) => !(l.habitId === habitId && l.date === date)),
+              };
+            }
+
+            return {
+              logs: state.logs.map((l, i) =>
+                i === existingIndex ? { ...l, count: newCount } : l
+              ),
+            };
+          }
+
+          return state;
+        });
+
+        try {
+          const existing = get().logs.find((l) => l.habitId === habitId && l.date === date);
+          if (existing) {
+            const newCount = (existing.count || 0) - 1;
+            if (newCount <= 0) {
+              api.deleteLog(habitId, date);
+            } else {
+              api.upsertLog(habitId, date, 'completed', newCount);
+            }
+          }
+        } catch {
+          // Queue for retry when online
+        }
+      },
+
+      addXP: (amount: number) => {
+        set((state) => {
+          const newXP = state.xp + amount;
+          const newLevel = getLevelFromXP(newXP);
+          return {
+            xp: newXP,
+            level: newLevel,
+          };
+        });
+      },
+
+      checkLevelUp: () => {
+        const state = get();
+        const level = getLevelFromXP(state.xp);
+        if (level > state.level) {
+          set({ level });
+          return true;
+        }
+        return false;
       },
 
       importData: (data: { habits: Habit[]; logs: Log[] }) => {
@@ -220,12 +284,15 @@ export const useHabitStore = create<HabitStore>()(
       },
 
       exportData: () => {
-        const { habits, logs } = get();
-        return { habits, logs };
+        const state = get();
+        return {
+          habits: state.habits,
+          logs: state.logs,
+        };
       },
 
       resetAll: async () => {
-        set({ habits: [], logs: [] });
+        set({ habits: [], logs: [], xp: 0, level: 1 });
 
         try {
           const { habits } = get();
@@ -237,11 +304,13 @@ export const useHabitStore = create<HabitStore>()(
     }),
     {
       name: 'auratrack-storage',
-      storage: throttledStorage(),
+      storage: customStorage,
       partialize: (state) => ({
         habits: state.habits,
         logs: state.logs,
-        selectedDate: getTodayDate(),
+        selectedDate: state.selectedDate,
+        xp: state.xp,
+        level: state.level,
       }),
       onRehydrateStorage: () => {
         return () => {

@@ -52,7 +52,7 @@ export const DesktopSidebar = memo(function DesktopSidebar({ activeTab, onTabCha
       <div className="pt-6 border-t border-white/5">
         <button
           onClick={onAddHabit}
-          className="w-full btn-primary py-3.5 flex items-center justify-center gap-2"
+          className="w-full btn-primary py-3 flex items-center justify-center gap-2"
         >
           <Plus className="w-5 h-5" />
           New Habit

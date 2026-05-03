@@ -1,0 +1,130 @@
+'use client';
+
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Trophy, Sparkles, Zap } from 'lucide-react';
+import { useHabitStore } from '@/store/useHabitStore';
+import { getXPForLevel } from '@/types';
+
+interface LevelDetailsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function LevelDetailsModal({ isOpen, onClose }: LevelDetailsModalProps) {
+  const xp = useHabitStore((s) => s.xp);
+  const level = useHabitStore((s) => s.level);
+
+  const totalXPForCurrentLevel = (() => {
+    let xpUsed = 0;
+    for (let i = 1; i < level; i++) {
+      xpUsed += getXPForLevel(i);
+    }
+    return xp - xpUsed;
+  })();
+
+  const xpForNextLevel = getXPForLevel(level) - totalXPForCurrentLevel;
+
+  const isCyberpunk = level >= 5;
+  const isCinematic = level >= 10;
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="w-full max-w-md bento-card m-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
+                  <Trophy className="w-6 h-6 text-accent" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Level {level}</h3>
+                  <p className="text-xs text-white/40">{xp} total XP</p>
+                </div>
+              </div>
+              <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-white/60">Progress to Level {level + 1}</span>
+                  <span className="text-xs text-white/40">{Math.round(totalXPForCurrentLevel)} / {getXPForLevel(level)} XP</span>
+                </div>
+                <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-accent rounded-full"
+                    style={{ width: `${(totalXPForCurrentLevel / getXPForLevel(level)) * 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-white/30 mt-2 flex items-center gap-1">
+                  <Zap className="w-3 h-3" />
+                  {Math.round(xpForNextLevel)} XP needed for next level
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-white/5">
+                <h4 className="text-sm font-semibold text-white/80 mb-3">XP Sources</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/50">Habit completion</span>
+                    <span className="text-white/70">10 XP</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/50">5-day streak bonus</span>
+                    <span className="text-white/70">50 XP</span>
+                  </div>
+                </div>
+              </div>
+
+              {isCyberpunk && (
+                <div className="p-4 rounded-xl bg-cyan-500/5 border border-cyan-500/20">
+                  <div className="flex items-center gap-2 text-cyan-400">
+                    <Sparkles className="w-4 h-4" />
+                    <span className="text-sm font-medium">Cyberpunk Theme Unlocked</span>
+                  </div>
+                </div>
+              )}
+
+              {isCinematic && (
+                <div className="p-4 rounded-xl bg-pink-500/5 border border-pink-500/20">
+                  <div className="flex items-center gap-2 text-pink-400">
+                    <Sparkles className="w-4 h-4" />
+                    <span className="text-sm font-medium">Cinematic Theme Unlocked</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="p-4 rounded-xl bg-white/5">
+                <h4 className="text-sm font-semibold text-white/80 mb-3">Upcoming Rewards</h4>
+                {level < 5 && (
+                  <p className="text-xs text-white/40">Reach Level 5 to unlock Cyberpunk theme</p>
+                )}
+                {level >= 5 && level < 10 && (
+                  <p className="text-xs text-white/40">Reach Level 10 to unlock Cinematic theme</p>
+                )}
+              {level >= 10 && (
+                <p className="text-xs text-white/40">You&apos;ve unlocked all themes! Keep going!</p>
+              )}
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}

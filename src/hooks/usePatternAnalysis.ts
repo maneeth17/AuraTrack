@@ -16,6 +16,24 @@ interface DayAnalysis {
   rate: number;
 }
 
+interface AdviceCard {
+  icon: string;
+  title: string;
+  message: string;
+  priority: number;
+}
+
+interface WeekendSlump {
+  weekdayRate: number;
+  weekendRate: number;
+}
+
+interface ChainReactionItem {
+  habitId: string;
+  habitTitle: string;
+  avgOthersMissed: number;
+}
+
 interface PatternAnalysis {
   longestStreak: { habitId: string; habitTitle: string; streak: number };
   bestDay: DayAnalysis;
@@ -25,6 +43,9 @@ interface PatternAnalysis {
   completionRate: number;
   mostConsistentHabit: { habitId: string; habitTitle: string; rate: number };
   habitsNeedingAttention: { habitId: string; habitTitle: string; rate: number }[];
+  weekendSlump: WeekendSlump | null;
+  chainReaction: ChainReactionItem[];
+  adviceCards: AdviceCard[];
 }
 
 export function usePatternAnalysis(): PatternAnalysis {
@@ -178,6 +199,94 @@ export function usePatternAnalysis(): PatternAnalysis {
     const totalCompletions = logs.filter((l) => l.status === 'completed').length;
     const totalPossible = habits.length * totalDays;
 
+    // Weekend Slump Detection
+    const weekdaySet = new Set(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+    let weekdayCompletions = 0, weekdayTotal = 0;
+    let weekendCompletions = 0, weekendTotal = 0;
+
+    for (const date of allDates) {
+      const dayOfWeek = daysOfWeek[new Date(date).getDay()];
+      const dayCompleted = completedByDate.get(date)?.size || 0;
+      if (weekdaySet.has(dayOfWeek)) {
+        weekdayCompletions += dayCompleted;
+        weekdayTotal += habits.length;
+      } else {
+        weekendCompletions += dayCompleted;
+        weekendTotal += habits.length;
+      }
+    }
+
+    const weekdayRate = weekdayTotal > 0 ? weekdayCompletions / weekdayTotal : 0;
+    const weekendRate = weekendTotal > 0 ? weekendCompletions / weekendTotal : 0;
+    const weekendSlump = (weekdayRate > 0 && weekendRate < weekdayRate * 0.8) ? { weekdayRate, weekendRate } : null;
+
+    // Chain Reaction Detection
+    const chainReaction: ChainReactionItem[] = [];
+    for (const habit of habits) {
+      const habitMissedDates = new Set(
+        allDates.filter(date => {
+          const dayLogs = completedByDate.get(date) || new Set();
+          return !dayLogs.has(habit.id);
+        })
+      );
+
+      if (habitMissedDates.size === 0) continue;
+
+      let totalOthersMissed = 0;
+      for (const date of Array.from(habitMissedDates)) {
+        const dayLogs = completedByDate.get(date) || new Set();
+        const othersMissed = habits.filter(h => h.id !== habit.id && !dayLogs.has(h.id)).length;
+        totalOthersMissed += othersMissed;
+      }
+
+      const avgOthersMissed = totalOthersMissed / habitMissedDates.size;
+      if (avgOthersMissed >= 1) {
+        chainReaction.push({ habitId: habit.id, habitTitle: habit.title, avgOthersMissed });
+      }
+    }
+    chainReaction.sort((a, b) => b.avgOthersMissed - a.avgOthersMissed);
+
+    // Advice Cards
+    const adviceCards: AdviceCard[] = [];
+
+    if (longestStreak.streak >= 5) {
+      adviceCards.push({
+        icon: '🔥',
+        title: 'Keep Your Streak Alive!',
+        message: `You're on a ${longestStreak.streak}-day streak for ${longestStreak.habitTitle}. Don't break the chain!`,
+        priority: 0,
+      });
+    }
+
+    if (chainReaction.length > 0) {
+      adviceCards.push({
+        icon: '⛓️',
+        title: 'Chain Reaction Alert',
+        message: `When you miss "${chainReaction[0].habitTitle}", you tend to miss ${chainReaction[0].avgOthersMissed.toFixed(1)} other habits on average.`,
+        priority: 1,
+      });
+    }
+
+    if (weekendSlump) {
+      adviceCards.push({
+        icon: '📅',
+        title: 'Weekend Slump Detected',
+        message: `Your completion rate drops on weekends (${Math.round(weekendRate * 100)}%) compared to weekdays (${Math.round(weekdayRate * 100)}%).`,
+        priority: 2,
+      });
+    }
+
+    if (habitsNeedingAttention.length > 0) {
+      adviceCards.push({
+        icon: '⚠️',
+        title: 'Habits Need Attention',
+        message: `"${habitsNeedingAttention[0].habitTitle}" has a low completion rate. Try moving it to a better time of day.`,
+        priority: 3,
+      });
+    }
+
+    adviceCards.sort((a, b) => a.priority - b.priority);
+
     return {
       longestStreak,
       bestDay,
@@ -187,6 +296,9 @@ export function usePatternAnalysis(): PatternAnalysis {
       completionRate: totalPossible > 0 ? totalCompletions / totalPossible : 0,
       mostConsistentHabit,
       habitsNeedingAttention: habitsNeedingAttention.slice(0, 3),
+      weekendSlump,
+      chainReaction: chainReaction.slice(0, 3),
+      adviceCards: adviceCards.slice(0, 3),
     };
   }, [habits, logs]);
 }

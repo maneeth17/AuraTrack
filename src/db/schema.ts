@@ -51,6 +51,9 @@ export const habits = pgTable('habits', {
   days: text('days').array().notNull(),
   color: varchar('color', { length: 20 }).notNull(),
   icon: varchar('icon', { length: 50 }).notNull(),
+  isFocusHabit: text('is_focus_habit').notNull().default('false'),
+  targetCount: integer('target_count').notNull().default(1),
+  currentCount: integer('current_count').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -60,6 +63,7 @@ export const logs = pgTable('logs', {
   habitId: varchar('habit_id', { length: 255 }).notNull().references(() => habits.id, { onDelete: 'cascade' }),
   date: varchar('date', { length: 10 }).notNull(),
   status: varchar('status', { length: 20 }).notNull(),
+  count: integer('count').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => {
   return {

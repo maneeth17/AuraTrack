@@ -3,6 +3,7 @@ import { Habit, Log } from '@/types';
 async function apiFetch(url: string, options?: RequestInit) {
   const res = await fetch(url, {
     ...options,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...options?.headers,
@@ -27,6 +28,9 @@ export async function fetchHabits(): Promise<Habit[]> {
     days: h.days as string[],
     color: h.color as string,
     icon: h.icon as string,
+    isFocusHabit: h.is_focus_habit === 'true' || h.is_focus_habit === true,
+    targetCount: h.target_count as number || undefined,
+    currentCount: h.current_count as number || 0,
     createdAt: h.created_at ? new Date(h.created_at as string).toISOString() : new Date().toISOString(),
   }));
 }
@@ -34,13 +38,21 @@ export async function fetchHabits(): Promise<Habit[]> {
 export async function fetchLogs(habitId?: string): Promise<Log[]> {
   const params = habitId ? `?habitId=${habitId}` : '';
   const data = await apiFetch(`/api/logs${params}`);
-  return data.logs;
+  return data.logs.map((log: { [key: string]: unknown }) => ({
+    date: log.date as string,
+    habitId: log.habit_id as string,
+    status: log.status as 'completed' | 'skipped',
+    count: log.count as number || 0,
+  }));
 }
 
 export async function createHabit(habit: Habit): Promise<Habit> {
   const data = await apiFetch('/api/habits', {
     method: 'POST',
-    body: JSON.stringify(habit),
+    body: JSON.stringify({
+      ...habit,
+      isFocusHabit: habit.isFocusHabit || false,
+    }),
   });
   return {
     ...data.habit,
@@ -51,7 +63,11 @@ export async function createHabit(habit: Habit): Promise<Habit> {
 export async function updateHabit(id: string, updates: Partial<Habit>): Promise<Habit> {
   const data = await apiFetch('/api/habits', {
     method: 'PUT',
-    body: JSON.stringify({ id, ...updates }),
+    body: JSON.stringify({ 
+      id, 
+      ...updates,
+      isFocusHabit: updates.isFocusHabit !== undefined ? updates.isFocusHabit : undefined,
+    }),
   });
   return {
     ...data.habit,
@@ -63,10 +79,10 @@ export async function deleteHabit(id: string): Promise<void> {
   await apiFetch(`/api/habits?id=${id}`, { method: 'DELETE' });
 }
 
-export async function upsertLog(habitId: string, date: string, status: string): Promise<Log> {
+export async function upsertLog(habitId: string, date: string, status: string, count?: number): Promise<Log> {
   const data = await apiFetch('/api/logs', {
     method: 'POST',
-    body: JSON.stringify({ habitId, date, status }),
+    body: JSON.stringify({ habitId, date, status, count }),
   });
   return data.log;
 }

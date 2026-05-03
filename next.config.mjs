@@ -55,6 +55,17 @@ const withPWA = withPWAInit({
 });
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  output: 'standalone',
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        'next-auth/react': false,
+      };
+    }
+    return config;
+  },
+};
 
 export default withPWA(nextConfig);

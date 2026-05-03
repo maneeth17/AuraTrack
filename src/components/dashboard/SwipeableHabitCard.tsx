@@ -1,12 +1,10 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, PanInfo, useMotionValue, useTransform, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Check, X as XIcon, Heart, Zap, Brain, Dumbbell, BookOpen, Users, Sun, Moon, Droplets, Coffee, Target, Trophy, Music, Camera, Smile, Star, Shield, Flame, Pencil, Trash2, X, ChevronRight, Calendar, TrendingUp, Award, AlertTriangle, Timer } from 'lucide-react';
 import { HabitWithStreak, Habit } from '@/types';
 import { useHabitStore } from '@/store/useHabitStore';
-import { hapticVibrate } from '@/lib/haptics';
-import { PomodoroTimer as PomodoroTimerComponent } from '@/components/focus/PomodoroTimer';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   heart: Heart,
@@ -36,67 +34,65 @@ interface SwipeableHabitCardProps {
   onComplete: () => void;
 }
 
-export const SwipeableHabitCard = React.memo(function SwipeableHabitCard({ habit, date, onOpenDetail, onComplete }: SwipeableHabitCardProps) {
+export function SwipeableHabitCard({ habit, date, onOpenDetail, onComplete }: SwipeableHabitCardProps) {
+  // Pillar 1: Selective subscriptions - useMemo to avoid re-renders
   const markHabit = useHabitStore((s) => s.markHabit);
   const toggleHabit = useHabitStore((s) => s.toggleHabit);
-  const [showTimer, setShowTimer] = useState(false);
-  const shouldReduceMotion = useReducedMotion();
-
+  const incrementHabitCount = useHabitStore((s) => s.incrementHabitCount);
+  const decrementHabitCount = useHabitStore((s) => s.decrementHabitCount);
+  
+  // Get only this habit's logs - memoized to avoid re-renders
+  const logs = useHabitStore((s) => s.logs);
+  const habitLogs = useMemo(() => logs.filter((l: any) => l.habitId === habit.id), [logs, habit.id]);
+  const todayLog = useMemo(() => habitLogs.find((l: any) => l.date === date), [habitLogs, date]);
+  
   const x = useMotionValue(0);
   const opacityRight = useTransform(x, [0, 80, 150], [0, 0.5, 1]);
   const opacityLeft = useTransform(x, [0, -80, -150], [0, 0.5, 1]);
   const scale = useTransform(x, [-150, 0, 150], [0.95, 1, 0.95]);
 
   const isCompleted = habit.todayStatus === 'completed';
+  const isCountBased = habit.targetCount && habit.targetCount > 1;
+  const currentCount = todayLog?.count || 0;
+  const targetCount = habit.targetCount || 1;
   const IconComponent = iconMap[habit.icon];
 
-  const handleDragEnd = useCallback((_event: MouseEvent | TouchEvent, info: PanInfo) => {
+  function handleDragEnd(_event: MouseEvent | TouchEvent, info: PanInfo) {
     if (info.offset.x > 100) {
-      markHabit(habit.id, date, 'completed');
-      onComplete();
-      hapticVibrate([10], 'swipe-right');
-    } else if (info.offset.x < -100 && isCompleted) {
-      toggleHabit(habit.id, date);
-      hapticVibrate([10], 'swipe-left');
+      if (isCountBased) {
+        incrementHabitCount(habit.id, date);
+      } else {
+        markHabit(habit.id, date, 'completed');
+      }
+      if (onComplete) onComplete();
+    } else if (info.offset.x < -100) {
+      if (isCountBased && currentCount > 0) {
+        decrementHabitCount(habit.id, date);
+      } else if (isCompleted) {
+        toggleHabit(habit.id, date);
+      }
     }
-  }, [habit.id, date, markHabit, toggleHabit, onComplete, isCompleted]);
+  }
 
-  const handleCheckboxClick = useCallback(() => {
-    if (isCompleted) {
+  function handleCheckboxClick() {
+    if (isCountBased) {
+      if (currentCount > 0) {
+        decrementHabitCount(habit.id, date);
+      } else {
+        incrementHabitCount(habit.id, date);
+      }
+      if (currentCount + 1 >= targetCount && onComplete) {
+        onComplete();
+      }
+    } else if (isCompleted) {
       toggleHabit(habit.id, date);
-      hapticVibrate([10], 'checkbox');
     } else {
       markHabit(habit.id, date, 'completed');
-      onComplete();
-      hapticVibrate([10], 'checkbox');
     }
-  }, [isCompleted, habit.id, date, markHabit, toggleHabit, onComplete]);
-
-  const handleDelete = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    window.dispatchEvent(new CustomEvent('delete-habit', { detail: habit.id }));
-  }, [habit.id]);
-
-  const handleTimerOpen = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowTimer(true);
-  }, []);
-
-  const handleTimerComplete = useCallback(() => {
-    markHabit(habit.id, date, 'completed');
-    onComplete();
-  }, [habit.id, date, markHabit, onComplete]);
-
-  const handleTimerClose = useCallback(() => {
-    setShowTimer(false);
-  }, []);
-
-  const animationConfig = shouldReduceMotion
-    ? { duration: 0.1 }
-    : { type: 'spring' as const, stiffness: 300, damping: 20 };
+  }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl will-change-transform">
+    <div className="relative overflow-hidden rounded-2xl">
       <motion.div
         className="absolute inset-0 flex items-center justify-end pr-4 bg-success/20 rounded-2xl"
         style={{ opacity: opacityRight }}
@@ -120,7 +116,7 @@ export const SwipeableHabitCard = React.memo(function SwipeableHabitCard({ habit
         dragElastic={0.15}
         onDragEnd={handleDragEnd}
         animate={isCompleted ? { scale: 1.02 } : { scale: 1 }}
-        transition={animationConfig}
+        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
         className="relative glass rounded-2xl p-4 cursor-grab active:cursor-grabbing"
       >
         <div
@@ -140,7 +136,15 @@ export const SwipeableHabitCard = React.memo(function SwipeableHabitCard({ habit
             </h3>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-xs text-white/40">{habit.category}</span>
-              {habit.streak.current > 0 && (
+              {isCountBased && (
+                <>
+                  <span className="text-white/20">&middot;</span>
+                  <span className="text-xs text-accent">
+                    {currentCount}/{targetCount}
+                  </span>
+                </>
+              )}
+              {!isCountBased && habit.streak.current > 0 && (
                 <>
                   <span className="text-white/20">&middot;</span>
                   <span className="text-xs text-warning flex items-center gap-0.5">
@@ -152,51 +156,66 @@ export const SwipeableHabitCard = React.memo(function SwipeableHabitCard({ habit
             </div>
           </div>
 
-          {habit.isFocusHabit && !isCompleted && (
-            <button
-              onClick={handleTimerOpen}
-              className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0 opacity-40 hover:opacity-100 hover:bg-accent/20 text-white/40 hover:text-accent"
-            >
-              <Timer className="w-4 h-4" />
-            </button>
-          )}
-
           <button
-            onClick={handleDelete}
+            onClick={(e) => {
+              e.stopPropagation();
+              const event = new CustomEvent('delete-habit', { detail: habit.id });
+              window.dispatchEvent(event);
+            }}
             className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0 opacity-40 hover:opacity-100 hover:bg-danger/20 text-white/40 hover:text-danger"
           >
             <Trash2 className="w-4 h-4" />
           </button>
 
+          {habit.isFocusHabit && !isCompleted && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (typeof window !== 'undefined') {
+                  const event = new CustomEvent('show-pomodoro', {
+                    detail: {
+                      habitId: habit.id,
+                      habitTitle: habit.title,
+                      habitColor: habit.color,
+                      onComplete: () => {
+                        if (!isCountBased) {
+                          markHabit(habit.id, date, 'completed');
+                        }
+                      },
+                      onClose: () => {
+                        // Nothing to do here - PomodoroTimer handles its own closing
+                      },
+                    }
+                  });
+                  window.dispatchEvent(event);
+                }
+              }}
+              className="w-11 h-11 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0 opacity-40 hover:opacity-100 hover:bg-accent/20 text-white/40 hover:text-accent min-h-[44px] min-w-[44px]"
+            >
+              <Timer className="w-5 h-5" />
+            </button>
+          )}
+
           <button
-            onClick={handleCheckboxClick}
-            className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all duration-200 shrink-0 ${
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCheckboxClick();
+            }}
+            className={`min-h-[44px] min-w-[44px] rounded-lg border-2 flex items-center justify-center transition-all duration-200 shrink-0 ${
               isCompleted
                 ? 'border-success bg-success/20 hover:bg-success/30'
                 : 'border-white/20 hover:border-accent/50 hover:bg-accent/10'
             }`}
           >
-            {isCompleted && <Check className="w-4 h-4 text-success" />}
+            {isCompleted && <Check className="w-5 h-5 text-success" />}
           </button>
 
           <ChevronRight className="w-4 h-4 text-white/20 shrink-0 hidden lg:block" />
         </div>
       </motion.div>
-
-      <AnimatePresence>
-        {showTimer && (
-          <PomodoroTimerComponent
-            habitId={habit.id}
-            habitTitle={habit.title}
-            habitColor={habit.color}
-            onComplete={handleTimerComplete}
-            onClose={handleTimerClose}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
-});
+}
 
 interface HabitDetailSheetProps {
   habit: HabitWithStreak | null;
@@ -209,21 +228,6 @@ interface HabitDetailSheetProps {
 export function HabitDetailSheet({ habit, isOpen, onClose, onEdit }: HabitDetailSheetProps & { date?: string }) {
   const deleteHabit = useHabitStore((s) => s.deleteHabit);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const shouldReduceMotion = useReducedMotion();
-
-  const handleEdit = useCallback(() => {
-    if (!habit) return;
-    onClose();
-    setTimeout(() => onEdit(habit), 300);
-  }, [habit, onClose, onEdit]);
-
-  const handleDeleteConfirm = useCallback(() => {
-    if (!habit) return;
-    deleteHabit(habit.id);
-    setShowDeleteConfirm(false);
-    onClose();
-    hapticVibrate([15], 'delete');
-  }, [habit, deleteHabit, onClose]);
 
   if (!habit) return null;
 
@@ -235,12 +239,6 @@ export function HabitDetailSheet({ habit, isOpen, onClose, onEdit }: HabitDetail
     year: 'numeric',
   });
 
-  if (!habit) return null;
-
-  const springConfig = shouldReduceMotion
-    ? { duration: 0.1 }
-    : { type: 'spring' as const, damping: 25, stiffness: 300 };
-
   return (
     <>
       <AnimatePresence>
@@ -250,7 +248,6 @@ export function HabitDetailSheet({ habit, isOpen, onClose, onEdit }: HabitDetail
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={shouldReduceMotion ? { duration: 0.1 } : undefined}
               onClick={onClose}
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
             />
@@ -258,7 +255,7 @@ export function HabitDetailSheet({ habit, isOpen, onClose, onEdit }: HabitDetail
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={springConfig}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="fixed inset-0 z-50 flex items-end lg:items-center justify-center pointer-events-none"
             >
               <div className="w-full lg:max-w-lg bg-surface border border-white/10 rounded-t-3xl lg:rounded-3xl max-h-[85vh] overflow-hidden flex flex-col pointer-events-auto shadow-2xl">
@@ -276,8 +273,8 @@ export function HabitDetailSheet({ habit, isOpen, onClose, onEdit }: HabitDetail
                         <p className="text-xs text-white/40">{habit.category} · {habit.frequency}</p>
                       </div>
                     </div>
-                    <button onClick={onClose} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-                      <X className="w-4 h-4 text-white/60" />
+                    <button onClick={onClose} className="min-h-[44px] min-w-[44px] rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
+                      <X className="w-5 h-5 text-white/60" />
                     </button>
                   </div>
                 </div>
@@ -326,7 +323,10 @@ export function HabitDetailSheet({ habit, isOpen, onClose, onEdit }: HabitDetail
 
                   <div className="flex gap-3 pt-2">
                     <button
-                      onClick={handleEdit}
+                      onClick={() => {
+                        onClose();
+                        setTimeout(() => onEdit(habit), 300);
+                      }}
                       className="flex-1 py-3 rounded-xl border border-accent/30 bg-accent/10 text-sm font-medium text-accent hover:bg-accent/20 transition-all flex items-center justify-center gap-2"
                     >
                       <Pencil className="w-4 h-4" />
@@ -354,7 +354,6 @@ export function HabitDetailSheet({ habit, isOpen, onClose, onEdit }: HabitDetail
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={shouldReduceMotion ? { duration: 0.1 } : undefined}
               onClick={() => setShowDeleteConfirm(false)}
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
             />
@@ -362,7 +361,6 @@ export function HabitDetailSheet({ habit, isOpen, onClose, onEdit }: HabitDetail
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={shouldReduceMotion ? { duration: 0.1 } : { type: 'spring', damping: 25, stiffness: 300 }}
               className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none"
             >
               <div className="w-full max-w-sm bg-surface border border-white/10 rounded-2xl p-6 pointer-events-auto shadow-2xl">
@@ -388,7 +386,11 @@ export function HabitDetailSheet({ habit, isOpen, onClose, onEdit }: HabitDetail
                     Cancel
                   </button>
                   <button
-                    onClick={handleDeleteConfirm}
+                    onClick={() => {
+                      deleteHabit(habit.id);
+                      setShowDeleteConfirm(false);
+                      onClose();
+                    }}
                     className="flex-1 py-2.5 rounded-xl bg-danger/20 border border-danger/30 text-sm font-medium text-danger hover:bg-danger/30 transition-all"
                   >
                     Delete

@@ -45,6 +45,8 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
   const [color, setColor] = useState(HABIT_COLORS[0]);
   const [icon, setIcon] = useState(HABIT_ICONS[0]);
   const [isFocusHabit, setIsFocusHabit] = useState(false);
+  const [enableCountTracking, setEnableCountTracking] = useState(false);
+  const [targetCount, setTargetCount] = useState(8);
 
   useEffect(() => {
     if (editHabit) {
@@ -55,6 +57,8 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
       setColor(editHabit.color);
       setIcon(editHabit.icon);
       setIsFocusHabit(editHabit.isFocusHabit || false);
+      setEnableCountTracking((editHabit.targetCount || 0) > 1);
+      setTargetCount(editHabit.targetCount || 8);
     } else {
       setTitle('');
       setDescription('');
@@ -63,16 +67,39 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
       setColor(HABIT_COLORS[0]);
       setIcon(HABIT_ICONS[0]);
       setIsFocusHabit(false);
+      setEnableCountTracking(false);
+      setTargetCount(8);
     }
   }, [editHabit, isOpen]);
 
   const handleSubmit = () => {
     if (!title.trim()) return;
 
-    if (editHabit) {
-      updateHabit(editHabit.id, { title, description, category, frequency, color, icon, isFocusHabit });
+    const habitData: Partial<Habit> = {
+      title,
+      description,
+      category,
+      frequency,
+      color,
+      icon,
+      isFocusHabit,
+    };
+
+    if (enableCountTracking && targetCount > 1) {
+      habitData.targetCount = targetCount;
+      habitData.currentCount = 0;
     } else {
-      addHabit({ title, description, category, frequency, days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'], color, icon, isFocusHabit });
+      habitData.targetCount = undefined;
+      habitData.currentCount = 0;
+    }
+
+    if (editHabit) {
+      updateHabit(editHabit.id, habitData);
+    } else {
+      addHabit({
+        ...habitData,
+        days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+      } as Omit<Habit, 'id' | 'createdAt'>);
     }
     onClose();
   };
@@ -101,8 +128,8 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
                   <h2 className="text-lg font-bold text-white">
                     {editHabit ? 'Edit Habit' : 'New Habit'}
                   </h2>
-                  <button onClick={onClose} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-                    <X className="w-4 h-4 text-white/60" />
+                  <button onClick={onClose} className="min-h-[44px] min-w-[44px] rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
+                    <X className="w-5 h-5 text-white/60" />
                   </button>
                 </div>
               </div>
@@ -189,6 +216,50 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
                 </div>
 
                 <div>
+                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 block">Count Tracking</label>
+                  <button
+                    type="button"
+                    onClick={() => setEnableCountTracking(!enableCountTracking)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                      enableCountTracking
+                        ? 'border-accent/30 bg-accent/10'
+                        : 'border-white/10 bg-white/5'
+                    }`}
+                  >
+                    <Target className={`w-5 h-5 ${enableCountTracking ? 'text-accent' : 'text-white/30'}`} />
+                    <div className="text-left flex-1">
+                      <p className={`text-sm font-medium ${enableCountTracking ? 'text-accent' : 'text-white/60'}`}>Enable Count Tracking</p>
+                      <p className="text-xs text-white/30">Track multiple completions per day</p>
+                    </div>
+                  </button>
+
+                  {enableCountTracking && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-3 flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10">
+                        <Target className="w-5 h-5 text-accent shrink-0" />
+                        <div className="flex-1">
+                          <label className="text-xs text-white/40">Target Count</label>
+                          <input
+                            type="number"
+                            min="2"
+                            max="100"
+                            value={targetCount}
+                            onChange={(e) => setTargetCount(Math.max(2, parseInt(e.target.value) || 2))}
+                            className="w-full bg-transparent text-white text-sm font-medium focus:outline-none"
+                          />
+                        </div>
+                        <span className="text-xs text-white/40">per day</span>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+
+                <div>
                   <label className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 block">Color</label>
                   <div className="flex flex-wrap gap-2">
                     {HABIT_COLORS.map((c) => (
@@ -231,7 +302,7 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
                 <button
                   onClick={handleSubmit}
                   disabled={!title.trim()}
-                  className="w-full btn-primary py-3.5 flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-full btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <Check className="w-4 h-4" />
                   {editHabit ? 'Update Habit' : 'Create Habit'}

@@ -1,4 +1,5 @@
-import NextAuth from 'next-auth';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+import type { NextAuthOptions } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { db } from '@/db';
@@ -7,13 +8,24 @@ import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { generateId } from '@/lib/streak';
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: DrizzleAdapter(db!, {
-    usersTable: users,
-    accountsTable: accounts,
-    sessionsTable: sessions,
-    verificationTokensTable: verificationTokens,
-  }),
+const isServer = typeof window === 'undefined';
+
+let adapter = undefined;
+if (isServer && db) {
+  try {
+    adapter = DrizzleAdapter(db, {
+      usersTable: users,
+      accountsTable: accounts,
+      sessionsTable: sessions,
+      verificationTokensTable: verificationTokens,
+    });
+  } catch (e) {
+    console.warn('Failed to initialize Drizzle adapter:', e);
+  }
+}
+
+export const authOptions: NextAuthOptions = {
+  adapter,
   providers: [
     Credentials({
       credentials: {
@@ -72,12 +84,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: '/login',
   },
+  session: {
+    strategy: 'jwt',
+  },
   callbacks: {
-    async session({ session, token }) {
-      if (session.user && token.sub) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async session({ session, token }: any) {
+      if (session?.user && token?.sub) {
         session.user.id = token.sub;
       }
       return session;
     },
   },
-});
+};
+
+export default authOptions;
