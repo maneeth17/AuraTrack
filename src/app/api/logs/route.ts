@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/db';
 import { logs, habits } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
+
+export const dynamic = 'force-dynamic';
 
 async function getUserHabitIds(userId: string): Promise<string[]> {
   if (!db) return [];
@@ -60,36 +62,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Habit not found' }, { status: 404 });
     }
 
-    // Check if log already exists for this habit + date
-    const existing = await db
-      .select()
-      .from(logs)
-      .where(and(eq(logs.habitId, body.habitId), eq(logs.date, body.date)))
-      .limit(1);
-
-    if (existing.length > 0) {
-      // Update existing log
-      const updated = await db
-        .update(logs)
-        .set({
-          status: body.status || existing[0].status,
-          count: body.count ?? existing[0].count,
-        })
-        .where(and(eq(logs.habitId, body.habitId), eq(logs.date, body.date)))
-        .returning();
-      return NextResponse.json({ log: updated[0] });
-    }
-
-    // Create new log
-    const newLog = await db.insert(logs).values({
+    // Upsert log using database-level ON CONFLICT
+    const upsertedLog = await db.insert(logs).values({
       id: crypto.randomUUID(),
       habitId: body.habitId,
       date: body.date,
       status: body.status || 'completed',
-      count: body.count || 0,
+      count: body.count !== undefined ? body.count : 0,
+    }).onConflictDoUpdate({
+      target: [logs.habitId, logs.date],
+      set: {
+        status: body.status || 'completed',
+        count: body.count !== undefined ? body.count : sql`${logs.count}`,
+      }
     }).returning();
 
-    return NextResponse.json({ log: newLog[0] }, { status: 201 });
+    return NextResponse.json({ log: upsertedLog[0] }, { status: 201 });
   } catch (error: unknown) {
     console.error('POST /api/logs error:', error);
     const message = error instanceof Error ? error.message : 'Failed to create log';
