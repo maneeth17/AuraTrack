@@ -8,7 +8,7 @@ import { HabitWithStreak, Log } from '@/types';
 
 function isLogComplete(log: Log, targetCount: number = 1): boolean {
   if (log.status !== 'completed') return false;
-  if (log.count !== undefined && log.count < targetCount) return false;
+  if (targetCount > 1 && log.count !== undefined && log.count < targetCount) return false;
   return true;
 }
 

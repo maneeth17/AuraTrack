@@ -17,7 +17,7 @@ function daysBetween(dateA: Date, dateB: Date): number {
 
 export function calculateStreak(logs: Log[], habitId: string, targetCount: number = 1): StreakData {
   const completedDates = logs
-    .filter((l) => l.habitId === habitId && l.status === 'completed' && (l.count === undefined || l.count >= targetCount))
+    .filter((l) => l.habitId === habitId && l.status === 'completed' && (targetCount <= 1 || l.count === undefined || l.count >= targetCount))
     .map((l) => l.date)
     .filter((date, idx, arr) => arr.indexOf(date) === idx)
     .sort((a, b) => b.localeCompare(a));
@@ -86,7 +86,7 @@ export function getConsistencyScoreWeighted(logs: Log[], habitId: string, target
 
   const completedDates = new Set(
     logs
-      .filter((l) => l.habitId === habitId && l.status === 'completed' && (l.count === undefined || l.count >= targetCount))
+      .filter((l) => l.habitId === habitId && l.status === 'completed' && (targetCount <= 1 || l.count === undefined || l.count >= targetCount))
       .map((l) => l.date)
   );
 
@@ -111,7 +111,7 @@ export function getTodayStatus(logs: Log[], habitId: string, date: string, targe
   const log = logs.find((l) => l.habitId === habitId && l.date === date);
   if (!log) return null;
   if (log.status !== 'completed') return log.status;
-  if (log.count !== undefined && log.count < targetCount) return null;
+  if (targetCount > 1 && log.count !== undefined && log.count < targetCount) return null;
   return log.status;
 }
 
