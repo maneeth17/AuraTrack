@@ -238,7 +238,7 @@ export const useHabitStore = create<HabitStore>()(
         );
 
         const habit = state.habits.find(h => h.id === habitId);
-        const targetCount = habit?.targetCount || 1;
+        const targetCount = Number(habit?.targetCount || 1);
         let newCountForApi = 1;
 
         if (existingIndex >= 0) {
@@ -250,7 +250,7 @@ export const useHabitStore = create<HabitStore>()(
               i === existingIndex ? { ...l, count: newCount, status: 'completed' as const } : l
             ),
           }));
-          if (newCount >= targetCount && (existingLog.count || 0) < targetCount) {
+          if (targetCount > 1 && newCount >= targetCount && (existingLog.count || 0) < targetCount) {
             set((state) => {
               const newXP = state.xp + 10;
               return { xp: newXP, level: getLevelFromXP(newXP) };
@@ -263,7 +263,7 @@ export const useHabitStore = create<HabitStore>()(
               { habitId, date, status: 'completed' as const, count: 1 },
             ],
           }));
-          if (1 >= targetCount) {
+          if (targetCount > 1 && 1 >= targetCount) {
             set((state) => {
               const newXP = state.xp + 10;
               return { xp: newXP, level: getLevelFromXP(newXP) };
@@ -291,10 +291,10 @@ export const useHabitStore = create<HabitStore>()(
           const currentCount = existingLog.count ?? 0;
           const newCount = currentCount - 1;
           const habit = state.habits.find(h => h.id === habitId);
-          const targetCount = habit?.targetCount || 1;
+          const targetCount = Number(habit?.targetCount || 1);
 
           let xpChange = 0;
-          if (currentCount >= targetCount && newCount < targetCount) {
+          if (targetCount > 1 && currentCount >= targetCount && newCount < targetCount) {
             xpChange = -10;
           }
 

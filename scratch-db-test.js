@@ -4,8 +4,8 @@ const { neon } = require('@neondatabase/serverless');
 async function main() {
   const sql = neon(process.env.DATABASE_URL);
   
-  const logs = await sql`SELECT * FROM logs ORDER BY created_at DESC LIMIT 5`;
-  console.log('Recent logs:', logs);
+  const habits = await sql`SELECT title, target_count FROM habits LIMIT 10`;
+  console.log('Habits:', habits);
 }
 
 main().catch(console.error);
