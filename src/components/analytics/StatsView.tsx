@@ -1,271 +1,200 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { useTodayCompletion, useWeeklyMomentum, useHabitsForDate } from '@/hooks/useHabits';
 import { useHabitStore } from '@/store/useHabitStore';
-import { CircularProgressRing } from './CircularProgressRing';
+import { useHabitsForDate } from '@/hooks/useHabits';
 import { ActivityHeatmap } from './ActivityHeatmap';
-import { TrendingUp, Award, Flame, Target, Zap } from 'lucide-react';
-
-type TimeRange = 'week' | 'month' | 'year';
+import { Award, Flame, Target } from 'lucide-react';
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend
+} from 'recharts';
 
 export function StatsView() {
   const selectedDate = useHabitStore((s) => s.selectedDate);
-  const completion = useTodayCompletion(selectedDate);
-  const momentum = useWeeklyMomentum();
   const habits = useHabitsForDate(selectedDate);
   const logs = useHabitStore(useShallow((s) => s.logs));
-  const [timeRange, setTimeRange] = useState<TimeRange>('week');
-
-  // Calculate advanced stats
+  
+  // High-level overview stats
   const stats = useMemo(() => {
     const totalStreaks = habits.reduce((sum, h) => sum + h.streak.current, 0);
     const bestStreak = habits.reduce((max, h) => Math.max(max, h.streak.longest), 0);
-    const avgStreak = habits.length > 0 ? Math.round(totalStreaks / habits.length) : 0;
+    const avgConsistency = habits.length > 0 
+      ? Math.round(habits.reduce((sum, h) => sum + h.streak.consistencyScore, 0) / habits.length) 
+      : 0;
 
-    // Calculate completion rate by day of week
-    const dayCompletions = [0, 0, 0, 0, 0, 0, 0]; // Sun-Sat
-    const dayTotals = [0, 0, 0, 0, 0, 0, 0];
+    return { totalStreaks, bestStreak, avgConsistency };
+  }, [habits]);
+
+  // 14-day Trend Data for Line Chart
+  const trendData = useMemo(() => {
+    const data = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
-    logs.forEach(log => {
-      if (log.status === 'completed' || (log.count && log.count > 0)) {
-        const date = new Date(log.date);
-        const dayOfWeek = date.getDay();
-        dayCompletions[dayOfWeek]++;
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const displayDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      
+      let completedCount = 0;
+      logs.forEach(log => {
+        if (log.date === dateStr && (log.status === 'completed' || (log.count && log.count > 0))) {
+          completedCount++;
+        }
+      });
+      
+      data.push({
+        date: displayDate,
+        fullDate: dateStr,
+        completed: completedCount
+      });
+    }
+    return data;
+  }, [logs]);
+
+  // Category Distribution for Donut Chart
+  const categoryData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    const colors: Record<string, string> = {};
+    
+    habits.forEach(h => {
+      counts[h.category] = (counts[h.category] || 0) + 1;
+      // Just pick the color of the first habit in this category to represent it
+      if (!colors[h.category]) {
+        colors[h.category] = h.color;
       }
     });
 
-    habits.forEach(habit => {
-      const habitLogs = logs.filter(l => l.habitId === habit.id);
-      habitLogs.forEach(log => {
-        if (log.status === 'completed' || (log.count && log.count > 0)) {
-          const date = new Date(log.date);
-          const dayOfWeek = date.getDay();
-          dayTotals[dayOfWeek]++;
-        }
-      });
-    });
+    return Object.keys(counts).map(key => ({
+      name: key,
+      value: counts[key],
+      color: colors[key]
+    })).sort((a, b) => b.value - a.value);
+  }, [habits]);
 
-    const bestDayIndex = dayCompletions.indexOf(Math.max(...dayCompletions));
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const bestDay = dayCompletions[bestDayIndex] > 0 ? days[bestDayIndex] : 'N/A';
-
-    // Count-based habits stats
-    const countBasedHabits = habits.filter(h => h.targetCount && h.targetCount > 1);
-    const totalCountCompletions = logs.reduce((sum, l) => sum + (l.count || 0), 0);
-
-    // Calculate trend (this week vs last week)
-    const now = new Date();
-    const thisWeekStart = new Date(now);
-    thisWeekStart.setDate(now.getDate() - now.getDay());
-    const lastWeekStart = new Date(thisWeekStart);
-    lastWeekStart.setDate(thisWeekStart.getDate() - 7);
-
-    const thisWeekLogs = logs.filter(l => {
-      const d = new Date(l.date);
-      return d >= thisWeekStart && (l.status === 'completed' || (l.count && l.count > 0));
-    });
-    const lastWeekLogs = logs.filter(l => {
-      const d = new Date(l.date);
-      return d >= lastWeekStart && d < thisWeekStart && (l.status === 'completed' || (l.count && l.count > 0));
-    });
-
-    const trend = lastWeekLogs.length > 0
-      ? Math.round(((thisWeekLogs.length - lastWeekLogs.length) / lastWeekLogs.length) * 100)
-      : 0;
-
-    // Category breakdown
-    const categoryCount: Record<string, number> = {};
-    habits.forEach(h => {
-      categoryCount[h.category] = (categoryCount[h.category] || 0) + 1;
-    });
-
-    return {
-      totalStreaks,
-      bestStreak,
-      avgStreak,
-      bestDay,
-      countBasedHabits: countBasedHabits.length,
-      totalCountCompletions,
-      trend,
-      categoryCount,
-      dayCompletions,
-    };
-  }, [habits, logs]);
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<Record<string, unknown>>; label?: string }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-[#1e293b] border border-white/10 rounded-xl p-3 shadow-xl">
+          <p className="text-white/60 text-xs mb-1">{label}</p>
+          <p className="text-accent font-bold text-lg">
+            {String(payload[0].value)} <span className="text-sm font-normal text-white/80">habits completed</span>
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
-    <div className="space-y-6 pb-8 lg:pb-4">
+    <div className="space-y-6 pb-8 lg:pb-4 main-scroll-container">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white">Analytics</h2>
-        <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
-          {(['week', 'month', 'year'] as TimeRange[]).map(range => (
-            <button
-              key={range}
-              onClick={() => setTimeRange(range)}
-              className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                timeRange === range ? 'bg-accent text-white' : 'text-white/40 hover:text-white/60'
-              }`}
-            >
-              {range.charAt(0).toUpperCase() + range.slice(1)}
-            </button>
-          ))}
+      </div>
+
+      {/* Clean Overview Cards */}
+      <div className="grid grid-cols-3 gap-3 md:gap-4">
+        <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
+          <Target className="w-5 h-5 text-accent mb-2" />
+          <span className="text-2xl font-bold text-white">{habits.length}</span>
+          <span className="text-[0.65rem] text-white/40 uppercase tracking-wider mt-1">Active</span>
+        </div>
+        <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
+          <Award className="w-5 h-5 text-success mb-2" />
+          <span className="text-2xl font-bold text-success">{stats.avgConsistency}%</span>
+          <span className="text-[0.65rem] text-white/40 uppercase tracking-wider mt-1">Consistency</span>
+        </div>
+        <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
+          <Flame className="w-5 h-5 text-warning mb-2" />
+          <span className="text-2xl font-bold text-warning">{stats.bestStreak}</span>
+          <span className="text-[0.65rem] text-white/40 uppercase tracking-wider mt-1">Best Streak</span>
         </div>
       </div>
 
-      {/* Primary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bento-card flex flex-col items-center justify-center py-6">
-          <CircularProgressRing percentage={completion.percentage} size={100} strokeWidth={6} label="Today" />
-        </div>
-        <div className="bento-card flex flex-col items-center justify-center py-6">
-          <CircularProgressRing percentage={momentum} size={100} strokeWidth={6} color="#34d399" label="This Week" />
-        </div>
-        <div className="bento-card flex flex-col items-center justify-center py-6">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <TrendingUp className={`w-4 h-4 ${stats.trend >= 0 ? 'text-success' : 'text-danger'}`} />
-              <span className={`text-2xl font-bold ${stats.trend >= 0 ? 'text-success' : 'text-danger'}`}>
-                {stats.trend >= 0 ? '+' : ''}{stats.trend}%
-              </span>
-            </div>
-            <p className="text-xs text-white/40">vs Last Week</p>
-          </div>
-        </div>
-        <div className="bento-card flex flex-col items-center justify-center py-6">
-          <div className="text-center">
-            <span className="text-2xl font-bold text-accent">{stats.avgStreak}</span>
-            <p className="text-xs text-white/40">Avg Streak</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Secondary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bento-card flex items-center gap-3 p-4">
-          <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center shrink-0">
-            <Target className="w-5 h-5 text-accent" />
-          </div>
-          <div>
-            <span className="text-xl font-bold text-white">{habits.length}</span>
-            <p className="text-xs text-white/40">Active Habits</p>
-          </div>
-        </div>
-        <div className="bento-card flex items-center gap-3 p-4">
-          <div className="w-10 h-10 rounded-xl bg-warning/15 flex items-center justify-center shrink-0">
-            <Flame className="w-5 h-5 text-warning" />
-          </div>
-          <div>
-            <span className="text-xl font-bold text-warning">{stats.totalStreaks}</span>
-            <p className="text-xs text-white/40">Total Streak Days</p>
-          </div>
-        </div>
-        <div className="bento-card flex items-center gap-3 p-4">
-          <div className="w-10 h-10 rounded-xl bg-success/15 flex items-center justify-center shrink-0">
-            <Award className="w-5 h-5 text-success" />
-          </div>
-          <div>
-            <span className="text-xl font-bold text-success">{stats.bestStreak}</span>
-            <p className="text-xs text-white/40">Best Streak</p>
-          </div>
-        </div>
-        <div className="bento-card flex items-center gap-3 p-4">
-          <div className="w-10 h-10 rounded-xl bg-purple-400/15 flex items-center justify-center shrink-0">
-            <Zap className="w-5 h-5 text-purple-400" />
-          </div>
-          <div>
-            <span className="text-xl font-bold text-purple-400">{stats.bestDay}</span>
-            <p className="text-xs text-white/40">Best Day</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Count-Based Stats (if applicable) */}
-      {stats.countBasedHabits > 0 && (
-        <div className="bento-card">
-          <h3 className="text-sm font-semibold text-white/80 mb-4">Count-Based Habits</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center p-4 bg-white/5 rounded-xl">
-              <span className="text-2xl font-bold text-blue-400">{stats.countBasedHabits}</span>
-              <p className="text-xs text-white/40 mt-1">Count-Based Habits</p>
-            </div>
-            <div className="text-center p-4 bg-white/5 rounded-xl">
-              <span className="text-2xl font-bold text-blue-400">{stats.totalCountCompletions}</span>
-              <p className="text-xs text-white/40 mt-1">Total Count Completions</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Activity Heatmap */}
-      <div className="bento-card">
-        <h3 className="text-sm font-semibold text-white/80 mb-4">Activity Heatmap</h3>
-        <ActivityHeatmap />
-      </div>
-
-      {/* Day of Week Performance */}
-      <div className="bento-card">
-        <h3 className="text-sm font-semibold text-white/80 mb-4">Day of Week Performance</h3>
-        <div className="grid grid-cols-7 gap-2">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => {
-            const maxVal = Math.max(...stats.dayCompletions, 1);
-            const height = (stats.dayCompletions[i] / maxVal) * 100;
-            return (
-              <div key={day} className="text-center">
-                <div className="h-24 flex items-end justify-center mb-2">
-                  <div
-                    className="w-full bg-accent/20 rounded-t-md transition-all duration-500"
-                    style={{ height: `${height}%`, backgroundColor: `${height > 50 ? 'var(--accent)' : ''}` }}
-                  />
-                </div>
-                <span className="text-xs text-white/40">{day}</span>
-                <span className="text-xs text-white/60 font-medium block">{stats.dayCompletions[i]}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Habit Breakdown */}
-      <div className="bento-card">
-        <h3 className="text-sm font-semibold text-white/80 mb-4">Habit Breakdown</h3>
-        <div className="space-y-3">
-          {habits.map((habit) => (
-            <div key={habit.id} className="flex items-center gap-3">
-              <div
-                className="w-3 h-3 rounded-full shrink-0"
-                style={{ backgroundColor: habit.color }}
+      {/* Interactive Trend Chart */}
+      <div className="bento-card p-5">
+        <h3 className="text-sm font-semibold text-white/80 mb-6">Completion Trend (14 Days)</h3>
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={trendData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis 
+                dataKey="date" 
+                stroke="rgba(255,255,255,0.2)" 
+                fontSize={10} 
+                tickLine={false}
+                axisLine={false}
+                dy={10}
               />
-              <span className="text-sm text-white/60 flex-1 truncate">{habit.title}</span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-white/40">{habit.streak.current} day streak</span>
-                <span className="text-xs text-white/40 w-10 text-right">{habit.streak.consistencyScore}%</span>
-              </div>
-              <div className="w-20 lg:w-28 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{ width: `${habit.streak.consistencyScore}%`, backgroundColor: habit.color }}
-                />
-              </div>
-            </div>
-          ))}
+              <YAxis 
+                stroke="rgba(255,255,255,0.2)" 
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+                allowDecimals={false}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2 }} />
+              <Line 
+                type="monotone" 
+                dataKey="completed" 
+                stroke="#818cf8" 
+                strokeWidth={3}
+                dot={{ r: 4, fill: '#1e293b', stroke: '#818cf8', strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: '#818cf8', stroke: '#fff', strokeWidth: 2 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Category Breakdown */}
-      {Object.keys(stats.categoryCount).length > 0 && (
-        <div className="bento-card">
-          <h3 className="text-sm font-semibold text-white/80 mb-4">Category Breakdown</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {Object.entries(stats.categoryCount).map(([category, count]) => (
-              <div key={category} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                <span className="text-sm text-white/60 capitalize">{category}</span>
-                <span className="text-sm font-semibold text-white">{count}</span>
-              </div>
-            ))}
+      {/* Interactive Donut Chart */}
+      {categoryData.length > 0 && (
+        <div className="bento-card p-5">
+          <h3 className="text-sm font-semibold text-white/80 mb-2">Focus Areas</h3>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1e293b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                  itemStyle={{ color: '#fff' }}
+                />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36}
+                  iconType="circle"
+                  wrapperStyle={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         </div>
       )}
+
+      {/* Activity Heatmap (Refined spacing) */}
+      <div className="bento-card p-5">
+        <h3 className="text-sm font-semibold text-white/80 mb-4">Consistency Heatmap</h3>
+        <div className="overflow-hidden">
+          <ActivityHeatmap />
+        </div>
+      </div>
+      
     </div>
   );
 }

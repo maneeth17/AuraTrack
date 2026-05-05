@@ -149,7 +149,7 @@ function DashboardContent() {
       />
 
       <div className="lg:pl-72">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-10 pt-6 lg:pt-8 pb-24 lg:pb-8">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-10 pt-6 lg:pt-8 pb-28 lg:pb-8">
           {renderView()}
         </div>
       </div>
