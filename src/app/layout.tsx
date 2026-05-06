@@ -4,7 +4,6 @@ import "./globals.css";
 import { ServiceWorkerRegistration } from "@/components/common/ServiceWorkerRegistration";
 import { PWAInstallPrompt } from "@/components/common/PWAInstallPrompt";
 import { ThemeProvider } from "@/components/common/ThemeProvider";
-import { LevelUpOverlay } from "@/components/common/LevelUpOverlay";
 
 export const dynamic = 'force-dynamic';
 
@@ -81,7 +80,6 @@ export default function RootLayout({
       >
         <ThemeProvider>
           {children}
-          <LevelUpOverlay />
           <ServiceWorkerRegistration />
           <PWAInstallPrompt />
         </ThemeProvider>
