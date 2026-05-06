@@ -55,6 +55,27 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var h = new Date().getHours();
+                  var theme = 'focus';
+                  if (h >= 5 && h < 10) theme = 'dawn';
+                  else if (h >= 21 || h < 5) theme = 'midnight';
+                  
+                  var pref = localStorage.getItem('auratrack-theme');
+                  if (pref && pref !== 'auto') theme = pref;
+                  
+                  document.documentElement.setAttribute('data-theme', theme);
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

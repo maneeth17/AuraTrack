@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Play, Pause, Square, Timer, X } from 'lucide-react';
 
@@ -83,9 +84,9 @@ const PomodoroTimerAtomic = memo(function PomodoroTimer({ habitId, habitTitle, h
         const isActive = i < (sessions % 4);
         return `<div class="w-2 h-2 rounded-full" style="background-color: ${isActive ? habitColor : 'rgba(255,255,255,0.1)'}"></div>`;
       }).join('');
-      sessionsContainerRef.current.innerHTML = `
-        <div class="flex items-center justify-center gap-1.5">${dots}<span class="text-xs text-white/30 ml-2">${sessions} sessions</span></div>
-      `;
+       sessionsContainerRef.current.innerHTML = `
+         <div class="flex items-center justify-center gap-1.5">${dots}<span class="text-xs text-foreground/50 ml-2">${sessions} sessions</span></div>
+       `;
     }
   }, [habitColor]);
 
@@ -229,16 +230,19 @@ const PomodoroTimerAtomic = memo(function PomodoroTimer({ habitId, habitTitle, h
     localStorage.removeItem(`pomodoro-${habitId}`);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="glass glass-card rounded-3xl border border-white/10 p-8 w-full max-w-sm shadow-2xl relative gpu-accelerated"
-      >
+  const modalRoot = typeof document !== 'undefined' ? document.body : null;
+  if (!modalRoot) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+       <motion.div
+         initial={{ opacity: 0, scale: 0.9, y: 20 }}
+         animate={{ opacity: 1, scale: 1, y: 0 }}
+         exit={{ opacity: 0, scale: 0.9, y: 20 }}
+         className="pomodoro-modal glass-card rounded-3xl border border-white/10 p-8 w-full max-w-sm shadow-2xl relative gpu-accelerated"
+       >
         <button onClick={handleCancel} className="absolute top-4 right-4 min-h-[44px] min-w-[44px] rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-          <X className="w-5 h-5 text-white/60" />
+          <X className="w-5 h-5 text-foreground/60" />
         </button>
 
         <div className="text-center mb-6">
@@ -246,34 +250,34 @@ const PomodoroTimerAtomic = memo(function PomodoroTimer({ habitId, habitTitle, h
             <Timer className="w-3.5 h-3.5 text-accent" />
             <span className="text-xs font-medium text-accent">Focus Session</span>
           </div>
-          <h3 className="text-lg font-bold text-white">{habitTitle}</h3>
-          <p ref={phaseTextRef} className="text-xs text-white/40 mt-1">
+          <h3 className="text-lg font-bold text-foreground">{habitTitle}</h3>
+          <p ref={phaseTextRef} className="text-xs text-foreground/40 mt-1">
             {PHASE_LABELS[phaseRef.current]}
           </p>
         </div>
 
         <div className="flex justify-center mb-8">
           <div className="relative w-48 h-48">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-              <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="4" />
-              <circle
-                ref={progressCircleRef}
-                cx="60"
-                cy="60"
-                r="54"
-                fill="none"
-                stroke={habitColor}
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeDasharray={circumference}
-                style={{ strokeDashoffset: circumference, transition: 'stroke-dashoffset 500ms linear' }}
-              />
-            </svg>
+             <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+               <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255, 255, 255, 0.1)" strokeWidth="4" />
+               <circle
+                 ref={progressCircleRef}
+                 cx="60"
+                 cy="60"
+                 r="54"
+                 fill="none"
+                 stroke={habitColor}
+                 strokeWidth="4"
+                 strokeLinecap="round"
+                 strokeDasharray={circumference}
+                 style={{ strokeDashoffset: circumference, transition: 'stroke-dashoffset 500ms linear' }}
+               />
+             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span ref={timeTextRef} className="text-4xl font-bold text-white font-mono" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              <span ref={timeTextRef} className="text-4xl font-bold text-foreground font-mono" style={{ fontVariantNumeric: 'tabular-nums' }}>
                 {formatTime(FOCUS_DURATION)}
               </span>
-              <span className="text-xs text-white/40 mt-1 capitalize">{PHASE_SHORT_LABELS[phaseRef.current]}</span>
+              <span className="text-xs text-foreground/40 mt-1 capitalize">{PHASE_SHORT_LABELS[phaseRef.current]}</span>
             </div>
           </div>
         </div>
@@ -283,18 +287,18 @@ const PomodoroTimerAtomic = memo(function PomodoroTimer({ habitId, habitTitle, h
             onClick={handleReset}
             className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
           >
-            <Square className="w-5 h-5 text-white/40" />
+            <Square className="w-5 h-5 opacity-40" />
           </button>
 
           <button
             onClick={isRunning ? handlePause : handleStart}
-            className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-            style={{ backgroundColor: `${habitColor}20`, border: `1px solid ${habitColor}40` }}
+            className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg"
+            style={{ backgroundColor: habitColor, boxShadow: `0 0 20px ${habitColor}60` }}
           >
             {isRunning ? (
-              <Pause className="w-6 h-6" style={{ color: habitColor }} />
+              <Pause className="w-6 h-6 text-white" />
             ) : (
-              <Play className="w-6 h-6 ml-1" style={{ color: habitColor }} />
+              <Play className="w-6 h-6 ml-1 text-white" />
             )}
           </button>
 
@@ -302,13 +306,14 @@ const PomodoroTimerAtomic = memo(function PomodoroTimer({ habitId, habitTitle, h
             onClick={handleCancel}
             className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
           >
-            <Square className="w-5 h-5 text-white/40" />
+            <X className="w-5 h-5 opacity-40" />
           </button>
         </div>
 
         <div ref={sessionsContainerRef} className="mt-6" />
       </motion.div>
-    </div>
+    </div>,
+    modalRoot
   );
 });
 

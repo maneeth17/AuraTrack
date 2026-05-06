@@ -38,10 +38,10 @@ const DateButton = memo(function DateButton({
           : 'bg-transparent border border-transparent hover:bg-white/5'
       }`}
     >
-      <span className={`text-[0.65rem] font-medium ${isSelected ? 'text-accent' : 'text-white/40'}`}>
+      <span className={`text-[0.65rem] font-medium ${isSelected ? 'text-accent' : 'text-foreground/40'}`}>
         {dayName}
       </span>
-      <span className={`text-lg font-bold mt-0.5 ${isSelected ? 'text-white' : 'text-white/70'}`}>
+      <span className={`text-lg font-bold mt-0.5 ${isSelected ? 'text-foreground' : 'text-foreground/70'}`}>
         {dayNum}
       </span>
       {!isSelected && isToday && (

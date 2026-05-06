@@ -23,8 +23,8 @@ export const DesktopSidebar = memo(function DesktopSidebar({ activeTab, onTabCha
           <Zap className="w-5 h-5 text-accent" />
         </div>
         <div>
-          <h1 className="text-lg font-bold text-white">AuraTrack</h1>
-          <p className="text-xs text-white/30">Build better habits</p>
+          <h1 className="text-lg font-bold text-foreground">AuraTrack</h1>
+          <p className="text-xs text-foreground/30">Build better habits</p>
         </div>
       </div>
 
@@ -39,7 +39,7 @@ export const DesktopSidebar = memo(function DesktopSidebar({ activeTab, onTabCha
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                 isActive
                   ? 'bg-accent/15 text-accent border border-accent/20'
-                  : 'text-white/40 hover:text-white/70 hover:bg-white/5 border border-transparent'
+                  : 'text-foreground/40 hover:text-foreground/70 hover:bg-white/5 border border-transparent'
               }`}
             >
               <Icon className="w-5 h-5" />

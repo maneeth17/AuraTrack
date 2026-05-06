@@ -58,8 +58,8 @@ export function PWAInstallPrompt() {
                 <Smartphone className="w-5 h-5 text-accent" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold text-white">Install AuraTrack</h3>
-                <p className="text-xs text-white/40 mt-0.5">Add to your home screen for quick access</p>
+                <h3 className="text-sm font-semibold text-foreground">Install AuraTrack</h3>
+                <p className="text-xs text-foreground/40 mt-0.5">Add to your home screen for quick access</p>
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={handleInstall}
@@ -70,7 +70,7 @@ export function PWAInstallPrompt() {
                   </button>
                   <button
                     onClick={handleDismiss}
-                    className="px-3 py-2 rounded-lg text-xs text-white/50 hover:text-white/70 hover:bg-white/5 transition-colors"
+                    className="px-3 py-2 rounded-lg text-xs text-foreground/50 hover:text-foreground/70 hover:bg-white/5 transition-colors"
                   >
                     Not now
                   </button>
@@ -80,7 +80,7 @@ export function PWAInstallPrompt() {
                 onClick={handleDismiss}
                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors shrink-0"
               >
-                <X className="w-4 h-4 text-white/30" />
+                <X className="w-4 h-4 text-foreground/30" />
               </button>
             </div>
           </div>

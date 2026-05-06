@@ -54,6 +54,14 @@ const LabView = nextDynamic(() => import('@/components/analytics/LabView').then(
   ),
 });
 
+const AIChat = nextDynamic(
+  () => import('@/components/common/AIChat').then((m) => ({ default: m.AIChat })),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
+
 function DashboardContent() {
   const [activeTab, setActiveTab] = useState('home');
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
@@ -128,7 +136,11 @@ function DashboardContent() {
   const renderView = () => {
     switch (activeTab) {
       case 'home':
-        return <HomeView onOpenSuggestions={handleOpenSuggestions} onOpenDetail={handleOpenDetail} />;
+        return (
+          <>
+            <HomeView onOpenSuggestions={handleOpenSuggestions} onOpenDetail={handleOpenDetail} />
+          </>
+        );
       case 'stats':
         return <StatsView />;
       case 'lab':
@@ -136,7 +148,11 @@ function DashboardContent() {
       case 'settings':
         return <SettingsView />;
       default:
-        return <HomeView onOpenSuggestions={handleOpenSuggestions} onOpenDetail={handleOpenDetail} />;
+        return (
+          <>
+            <HomeView onOpenSuggestions={handleOpenSuggestions} onOpenDetail={handleOpenDetail} />
+          </>
+        );
     }
   };
 
@@ -199,6 +215,8 @@ function DashboardContent() {
           }}
         />
       )}
+      
+      <AIChat />
     </>
   );
 }

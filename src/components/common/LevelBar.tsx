@@ -46,8 +46,8 @@ export function LevelBar() {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1.5">
-            <p className="text-sm font-bold text-white">Level {level}</p>
-            <p className="text-[0.65rem] text-white/50 font-mono">{xp} XP</p>
+            <p className="text-sm font-bold text-foreground">Level {level}</p>
+            <p className="text-[0.65rem] text-foreground/50 font-mono">{xp} XP</p>
           </div>
           
           <div className="relative h-2 bg-white/10 rounded-full overflow-hidden">
@@ -67,7 +67,7 @@ export function LevelBar() {
         </div>
 
         <div className="shrink-0 flex items-center justify-center">
-           <Zap className="w-4 h-4 text-white/20" />
+           <Zap className="w-4 h-4 text-foreground/20" />
         </div>
       </div>
 

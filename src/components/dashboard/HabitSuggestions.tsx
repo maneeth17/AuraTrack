@@ -104,12 +104,12 @@ export function HabitSuggestions({ isOpen, onClose }: HabitSuggestionsProps) {
             <div className="w-full lg:max-w-lg bg-surface border border-white/10 rounded-t-3xl lg:rounded-3xl max-h-[90vh] lg:max-h-[85vh] overflow-hidden flex flex-col pointer-events-auto shadow-2xl">
               <div className="shrink-0 px-5 pt-5 pb-4 border-b border-white/5">
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-lg font-bold text-white">Quick Start</h2>
+                  <h2 className="text-lg font-bold text-foreground">Quick Start</h2>
                   <button onClick={onClose} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-                    <X className="w-4 h-4 text-white/60" />
+                    <X className="w-4 h-4 text-foreground/60" />
                   </button>
                 </div>
-                <p className="text-sm text-white/40">Choose habits to start tracking today. Tap to add instantly, or select multiple below.</p>
+                <p className="text-sm text-foreground/40">Choose habits to start tracking today. Tap to add instantly, or select multiple below.</p>
               </div>
 
               <div className="overflow-y-auto flex-1 p-5">
@@ -137,12 +137,12 @@ export function HabitSuggestions({ isOpen, onClose }: HabitSuggestionsProps) {
                           </div>
                           {isSelected && (
                             <div className="ml-auto w-5 h-5 rounded-full bg-accent flex items-center justify-center">
-                              <Check className="w-3 h-3 text-white" />
+                              <Check className="w-3 h-3 text-foreground" />
                             </div>
                           )}
                         </div>
-                        <p className="text-xs font-semibold text-white/90 leading-tight">{suggestion.title}</p>
-                        <p className="text-[0.65rem] text-white/30 mt-0.5 line-clamp-2">{suggestion.description}</p>
+                        <p className="text-xs font-semibold text-foreground/90 leading-tight">{suggestion.title}</p>
+                        <p className="text-[0.65rem] text-foreground/30 mt-0.5 line-clamp-2">{suggestion.description}</p>
                       </button>
                     );
                   })}
@@ -160,14 +160,14 @@ export function HabitSuggestions({ isOpen, onClose }: HabitSuggestionsProps) {
                       Add {selected.size} Habit{selected.size > 1 ? 's' : ''}
                     </button>
                   ) : (
-                    <p className="text-center text-xs text-white/30">Tap a card to select, then add below</p>
+                    <p className="text-center text-xs text-foreground/30">Tap a card to select, then add below</p>
                   )}
                 </div>
               )}
 
               {availableHabits.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <p className="text-sm text-white/50">All suggested habits already added!</p>
+                  <p className="text-sm text-foreground/50">All suggested habits already added!</p>
                 </div>
               )}
             </div>

@@ -4,6 +4,8 @@ import { db } from '@/db';
 import { habits } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id || !db) {

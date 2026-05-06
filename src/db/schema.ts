@@ -10,6 +10,7 @@ export const users = pgTable('users', {
   shareId: text('share_id').unique(),
   xp: integer('xp').notNull().default(0),
   level: integer('level').notNull().default(1),
+  themePreference: varchar('theme_preference', { length: 20 }).default('auto'), // 'auto', 'dawn', 'focus', 'midnight'
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 

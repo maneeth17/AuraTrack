@@ -53,12 +53,12 @@ export function LevelDetailsModal({ isOpen, onClose }: LevelDetailsModalProps) {
                       <Trophy className="w-5 h-5 text-accent" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-bold text-white">Level {level}</h2>
-                      <p className="text-xs text-white/40">{xp} total XP</p>
+                      <h2 className="text-lg font-bold text-foreground">Level {level}</h2>
+                      <p className="text-xs text-foreground/40">{xp} total XP</p>
                     </div>
                   </div>
                   <button onClick={onClose} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-                    <X className="w-4 h-4 text-white/60" />
+                    <X className="w-4 h-4 text-foreground/60" />
                   </button>
                 </div>
               </div>
@@ -66,8 +66,8 @@ export function LevelDetailsModal({ isOpen, onClose }: LevelDetailsModalProps) {
               <div className="overflow-y-auto flex-1 p-5 space-y-4">
                 <div className="p-4 rounded-xl bg-white/5">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-white/60">Progress to Level {level + 1}</span>
-                    <span className="text-xs text-white/40">{Math.round(totalXPForCurrentLevel)} / {getXPForLevel(level)} XP</span>
+                    <span className="text-sm text-foreground/60">Progress to Level {level + 1}</span>
+                    <span className="text-xs text-foreground/40">{Math.round(totalXPForCurrentLevel)} / {getXPForLevel(level)} XP</span>
                   </div>
                   <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                     <div
@@ -75,22 +75,22 @@ export function LevelDetailsModal({ isOpen, onClose }: LevelDetailsModalProps) {
                       style={{ width: `${(totalXPForCurrentLevel / getXPForLevel(level)) * 100}%` }}
                     />
                   </div>
-                  <p className="text-xs text-white/30 mt-2 flex items-center gap-1">
+                  <p className="text-xs text-foreground/30 mt-2 flex items-center gap-1">
                     <Zap className="w-3 h-3" />
                     {Math.round(xpForNextLevel)} XP needed for next level
                   </p>
                 </div>
 
                 <div className="p-4 rounded-xl bg-white/5">
-                  <h4 className="text-sm font-semibold text-white/80 mb-3">XP Sources</h4>
+                  <h4 className="text-sm font-semibold text-foreground/80 mb-3">XP Sources</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-white/50">Habit completion</span>
-                      <span className="text-white/70">10 XP</span>
+                      <span className="text-foreground/50">Habit completion</span>
+                      <span className="text-foreground/70">10 XP</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-white/50">5-day streak bonus</span>
-                      <span className="text-white/70">50 XP</span>
+                      <span className="text-foreground/50">5-day streak bonus</span>
+                      <span className="text-foreground/70">50 XP</span>
                     </div>
                   </div>
                 </div>
@@ -114,15 +114,15 @@ export function LevelDetailsModal({ isOpen, onClose }: LevelDetailsModalProps) {
                 )}
 
                 <div className="p-4 rounded-xl bg-white/5">
-                  <h4 className="text-sm font-semibold text-white/80 mb-3">Upcoming Rewards</h4>
+                  <h4 className="text-sm font-semibold text-foreground/80 mb-3">Upcoming Rewards</h4>
                   {level < 5 && (
-                    <p className="text-xs text-white/40">Reach Level 5 to unlock Cyberpunk theme</p>
+                    <p className="text-xs text-foreground/40">Reach Level 5 to unlock Cyberpunk theme</p>
                   )}
                   {level >= 5 && level < 10 && (
-                    <p className="text-xs text-white/40">Reach Level 10 to unlock Cinematic theme</p>
+                    <p className="text-xs text-foreground/40">Reach Level 10 to unlock Cinematic theme</p>
                   )}
                 {level >= 10 && (
-                  <p className="text-xs text-white/40">You&apos;ve unlocked all themes! Keep going!</p>
+                  <p className="text-xs text-foreground/40">You&apos;ve unlocked all themes! Keep going!</p>
                 )}
                 </div>
               </div>

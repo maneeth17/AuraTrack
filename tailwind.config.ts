@@ -9,17 +9,20 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#020617",
-        surface: "#0f172a",
-        "surface-light": "#1e293b",
+        background: "var(--background, #020617)",
+        foreground: "var(--foreground, #f8fafc)",
+        surface: "var(--surface, #0f172a)",
+        "surface-light": "var(--surface, #1e293b)",
         glass: "rgba(255, 255, 255, 0.05)",
         "glass-border": "rgba(255, 255, 255, 0.1)",
         "glass-hover": "rgba(255, 255, 255, 0.08)",
         accent: {
-          DEFAULT: "#818cf8",
-          glow: "#6366f1",
-          soft: "#a5b4fc",
+          DEFAULT: "var(--accent, #818cf8)",
+          glow: "var(--accent, #6366f1)",
+          soft: "var(--accent, #a5b4fc)",
         },
+        primary: "var(--primary, #6D28D9)",
+        secondary: "var(--secondary, #1E1B4B)",
         success: {
           DEFAULT: "#34d399",
           glow: "#10b981",
@@ -34,8 +37,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "Inter", "system-ui", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "monospace"],
+        sans: ["var(--font-outfit)", "Inter", "system-ui", "sans-serif"],
+        mono: ["monospace"],
       },
       backdropBlur: {
         xs: "2px",

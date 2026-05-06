@@ -72,10 +72,10 @@ export default function LoginPage() {
             <Sparkles className="w-4 h-4 text-accent" />
             <span className="text-xs font-medium text-accent">AuraTrack</span>
           </div>
-          <h1 className="text-3xl font-bold text-white">
+          <h1 className="text-3xl font-bold text-foreground">
             {isLogin ? 'Welcome back' : 'Create account'}
           </h1>
-          <p className="text-white/40 mt-2">
+          <p className="text-foreground/40 mt-2">
             {isLogin ? 'Sign in to continue your streaks' : 'Start building better habits today'}
           </p>
         </div>
@@ -84,39 +84,39 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div>
-                <label className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 block">Name</label>
+                <label className="text-xs font-medium text-foreground/50 uppercase tracking-wider mb-2 block">Name</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/30" />
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Your name"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
                   />
                 </div>
               </div>
             )}
 
             <div>
-              <label className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 block">Email</label>
+              <label className="text-xs font-medium text-foreground/50 uppercase tracking-wider mb-2 block">Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/30" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   required
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 block">Password</label>
+              <label className="text-xs font-medium text-foreground/50 uppercase tracking-wider mb-2 block">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/30" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
@@ -124,12 +124,12 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   required
                   minLength={6}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-12 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-12 py-3 text-sm text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/30 hover:text-foreground/60 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -163,7 +163,7 @@ export default function LoginPage() {
                 setIsLogin(!isLogin);
                 setError('');
               }}
-              className="w-full text-sm text-white/40 hover:text-white/60 transition-colors py-2"
+              className="w-full text-sm text-foreground/40 hover:text-foreground/60 transition-colors py-2"
             >
               {isLogin ? "Don't have an account? " : 'Already have an account? '}
               <span className="text-accent">{isLogin ? 'Sign up' : 'Sign in'}</span>

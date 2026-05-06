@@ -77,7 +77,7 @@ export default async function SharePage({ params }: { params: { id: string } }) 
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0f1e] text-white">
+    <div className="min-h-screen bg-[#0a0f1e] text-foreground">
       <div className="max-w-3xl mx-auto px-4 py-12">
         <div className="text-center mb-12">
           {data.image && (
@@ -86,22 +86,22 @@ export default async function SharePage({ params }: { params: { id: string } }) 
             </div>
           )}
           <h1 className="text-3xl font-bold">{data.name}&apos;s Habit Journey</h1>
-          <p className="text-white/40 mt-2">Building better habits, one day at a time</p>
+          <p className="text-foreground/40 mt-2">Building better habits, one day at a time</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-12">
           <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 text-center">
             <p className="text-4xl font-bold text-accent">{data.totalHabits}</p>
-            <p className="text-sm text-white/40 mt-1">Active Habits</p>
+            <p className="text-sm text-foreground/40 mt-1">Active Habits</p>
           </div>
           <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 text-center">
             <p className="text-4xl font-bold text-emerald-400">{data.totalCompletions}</p>
-            <p className="text-sm text-white/40 mt-1">Total Completions</p>
+            <p className="text-sm text-foreground/40 mt-1">Total Completions</p>
           </div>
         </div>
 
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-white/60 uppercase tracking-wider text-sm">Current Habits</h2>
+          <h2 className="text-lg font-semibold text-foreground/60 uppercase tracking-wider text-sm">Current Habits</h2>
           {data.habits && data.habits.length > 0 ? (
             data.habits.map((habit) => (
               <div
@@ -122,18 +122,18 @@ export default async function SharePage({ params }: { params: { id: string } }) 
                     })()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-white">{habit.title}</h3>
+                    <h3 className="text-lg font-semibold text-foreground">{habit.title}</h3>
                     {habit.description && (
-                      <p className="text-sm text-white/40 mt-0.5 line-clamp-1">{habit.description}</p>
+                      <p className="text-sm text-foreground/40 mt-0.5 line-clamp-1">{habit.description}</p>
                     )}
                     <div className="flex items-center gap-4 mt-3">
                       <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 rounded-full bg-accent" />
-                        <span className="text-xs text-white/50">{habit.currentStreak} day streak</span>
+                        <span className="text-xs text-foreground/50">{habit.currentStreak} day streak</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                        <span className="text-xs text-white/50">{habit.completedDays}/{habit.totalDays} completed</span>
+                        <span className="text-xs text-foreground/50">{habit.completedDays}/{habit.totalDays} completed</span>
                       </div>
                     </div>
                   </div>
@@ -148,14 +148,14 @@ export default async function SharePage({ params }: { params: { id: string } }) 
               </div>
             ))
           ) : (
-            <div className="text-center py-8 text-white/40">
+            <div className="text-center py-8 text-foreground/40">
               <p className="text-sm">No habits tracked yet</p>
             </div>
           )}
         </div>
 
         <div className="mt-16 text-center">
-          <p className="text-xs text-white/20">
+          <p className="text-xs text-foreground/20">
             Shared via{' '}
             <a href="https://auratrack.app" className="text-accent/60 hover:text-accent transition-colors">
               AuraTrack

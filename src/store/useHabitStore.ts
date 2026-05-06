@@ -89,7 +89,10 @@ export const useHabitStore = create<HabitStore>()(
       xp: 0,
       level: 1,
       isSyncing: false,
+      hasHydrated: false,
       pomodoroSettings: loadPomodoroSettings(),
+
+      setHasHydrated: (val: boolean) => set({ hasHydrated: val }),
 
       // This is called from login page after successful auth
       syncFromServer,
@@ -402,10 +405,9 @@ export const useHabitStore = create<HabitStore>()(
     {
       name: 'auratrack-storage',
       storage: customStorage,
-      onRehydrateStorage: () => {
+      onRehydrateStorage: (state) => {
         return () => {
-          // Don't sync here - causes circular reference issues
-          // Sync is handled explicitly after login
+          state?.setHasHydrated(true);
         };
       },
     }

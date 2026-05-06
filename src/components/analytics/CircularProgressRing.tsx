@@ -48,11 +48,11 @@ export function CircularProgressRing({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-bold text-white">{percentage}%</span>
+          <span className="text-2xl font-bold text-foreground">{percentage}%</span>
         </div>
       </div>
-      {label && <span className="text-xs text-white/50 mt-2 font-medium">{label}</span>}
-      {sublabel && <span className="text-[0.65rem] text-white/30">{sublabel}</span>}
+      {label && <span className="text-xs text-foreground/50 mt-2 font-medium">{label}</span>}
+      {sublabel && <span className="text-[0.65rem] text-foreground/30">{sublabel}</span>}
     </div>
   );
 }

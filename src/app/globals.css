@@ -2,11 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================
+   THEME SYSTEM
+   ========================================== */
 :root {
-  --background: #020617;
+  /* Default: Focus */
+  --background: #0f172a;
   --foreground: #f8fafc;
+  --foreground-rgb: 248, 250, 252;
+  --surface: #1e293b;
+  --surface-border: rgba(255, 255, 255, 0.1);
+  --accent: #3b82f6;
+  --accent-foreground: #ffffff;
+  --muted: #94a3b8;
+  --muted-foreground: #64748b;
+  --accent-rgb: 59, 130, 246;
 }
 
+[data-theme="focus"] {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --foreground-rgb: 248, 250, 252;
+  --surface: #1e293b;
+  --surface-border: rgba(255, 255, 255, 0.1);
+  --accent: #3b82f6;
+  --accent-foreground: #ffffff;
+  --muted: #94a3b8;
+  --muted-foreground: #64748b;
+  --accent-rgb: 59, 130, 246;
+}
+
+[data-theme="dawn"] {
+  --background: #fefce8;
+  /* Softer sunrise yellow */
+  --foreground: #451a03;
+  --foreground-rgb: 69, 26, 3;
+  --surface: #fef3c7;
+  --surface-border: rgba(69, 26, 3, 0.1);
+  --accent: #eab308;
+  --accent-foreground: #ffffff;
+  --muted: #b45309;
+  --muted-foreground: #d97706;
+  --accent-rgb: 234, 179, 8;
+}
+
+[data-theme="midnight"] {
+  --background: #000000;
+  /* Pure Stealth Black */
+  --foreground: #e2e8f0;
+  --foreground-rgb: 226, 232, 240;
+  --surface: #0a0a0a;
+  /* Darkest Gray */
+  --surface-border: rgba(255, 255, 255, 0.05);
+  --accent: #2563eb;
+  --accent-foreground: #ffffff;
+  --muted: #475569;
+  --muted-foreground: #1e293b;
+  --accent-rgb: 37, 99, 235;
+}
+
+[data-theme="cyberpunk"] {
+  --background: #000000;
+  --foreground: #00ffcc;
+  --foreground-rgb: 0, 255, 204;
+  --surface: #0f0014;
+  --surface-border: rgba(255, 0, 255, 0.2);
+  --accent: #ff00ff;
+  --accent-foreground: #ffffff;
+  --muted: #006655;
+  --muted-foreground: #004433;
+  --accent-rgb: 255, 0, 255;
+}
+
+[data-theme="cinematic"] {
+  --background: #0a0a05;
+  --foreground: #f2e9d0;
+  --foreground-rgb: 242, 233, 208;
+  --surface: #1a1a15;
+  --surface-border: rgba(140, 100, 40, 0.2);
+  --accent: #d4af37;
+  /* Metallic Gold */
+  --accent-foreground: #1a1a1a;
+  --muted: #8c6428;
+  --muted-foreground: #5c4018;
+  --accent-rgb: 212, 175, 55;
+}
+
+/* ==========================================
+   BASE STYLES
+   ========================================== */
 * {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
@@ -33,126 +117,201 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+/* ==========================================
+   UTILITY CLASSES
+   ========================================== */
+.text-balance {
+  text-wrap: balance;
+}
+
+.glass {
+  backdrop-filter: blur(12px);
+  background-color: var(--surface);
+  border: 1px solid var(--surface-border);
+}
+
+.glass-hover {
+  transition: all 0.2s;
+}
+
+.glass-hover:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.glow-accent {
+  box-shadow: 0 0 20px rgba(var(--accent-rgb, 139, 92, 246), 0.5);
+}
+
+.glow-success {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* ==========================================
+   COMPONENT CLASSES
+   ========================================== */
+.bento-card {
+  backdrop-filter: blur(12px);
+  background-color: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: 1rem;
+  padding: 1rem;
+  transition: all 0.2s;
+}
+
+.bento-card:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.btn-primary {
+  background-color: rgba(var(--accent-rgb, 139, 92, 246), 0.2);
+  color: rgb(var(--accent-rgb, 139, 92, 246));
+  border: 1px solid rgba(var(--accent-rgb, 139, 92, 246), 0.3);
+  border-radius: 0.75rem;
+  padding: 0.625rem 1rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: rgba(var(--accent-rgb, 139, 92, 246), 0.3);
+  box-shadow: 0 0 20px rgba(var(--accent-rgb, 139, 92, 246), 0.5);
+}
+
+.btn-danger {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: rgb(239, 68, 68);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 0.75rem;
+  padding: 0.625rem 1rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-danger:hover {
+  background-color: rgba(239, 68, 68, 0.3);
+}
+
+.fab-glow {
+  box-shadow: 0 0 30px rgba(var(--accent-rgb, 139, 92, 246), 0.6);
+  transition: box-shadow 0.3s;
+}
+
+.fab-glow:hover {
+  box-shadow: 0 0 20px rgba(var(--accent-rgb, 139, 92, 246), 0.5);
+}
+
+/* Force Light Text in Dark Modals (Pomodoro) */
+.pomodoro-modal {
+  color: #ffffff !important;
+}
+
+.pomodoro-modal * {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.pomodoro-modal .text-foreground {
+  color: #ffffff !important;
+}
+
+.pomodoro-modal .text-foreground\/40 {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.pomodoro-modal .text-foreground\/50 {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.pomodoro-modal .text-foreground\/60 {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* ==========================================
+   LAYERED GLOW SYSTEM (Habit Card)
+   ========================================== */
+.habit-card-advanced {
+  position: relative;
+  background-color: var(--surface); /* Reverted to var so themes like Dawn work correctly */
+  border: 1px solid var(--surface-border);
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+[data-theme="dawn"] .habit-card-advanced {
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 1. The Border Glow (Outer) - positive spread values */
+.habit-card-advanced.active {
+  border-color: var(--habit-color);
+  box-shadow:
+    0 0 15px 2px var(--habit-color), /* Soft outer fringe (2px positive spread) */
+    inset 0 0 8px 2px var(--habit-color); /* Subtle inner edge */
+}
+
+/* 2. The Liquid Surface (Inner) - Proximity Lighting */
+.habit-card-advanced::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    var(--habit-color-transparent),
+    transparent 40%
+  );
+  opacity: 0;
+  transition: opacity 0.5s;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.habit-card-advanced:hover::after {
+  opacity: 0.15;
+}
+
+/* 3. Completion Pulse Animation - positive spread values */
+.habit-card-advanced.completed {
+  animation: completion-pulse 1.5s ease-in-out;
+}
+
+@keyframes completion-pulse {
+  0%, 100% {
+    box-shadow: 0 0 15px 2px var(--habit-color);
   }
-  .glass {
-    @apply bg-white/5 border border-white/10;
-  }
-  .glass-blur {
-    @apply backdrop-blur-md;
-  }
-  /* Pillar 4: Hardware acceleration for smooth scrolling */
-  .scroll-gpu-layer,
-  .gpu-accelerated {
-    transform: translateZ(0);
-    will-change: transform;
-    backface-visibility: hidden;
-    contain: paint;
-  }
-  
-  /* Pillar 1: GPU Layering for Habit Cards - Force GPU compositing */
-  .habit-card-gpu {
-    transform: translateZ(0);
-    will-change: transform, opacity;
-    backface-visibility: hidden;
-    contain: layout style paint;
-    isolation: isolate;
-  }
-  
-  /* Prevent backdrop-filter paint bleeding */
-  .glass-card {
-    isolation: isolate;
-    transform: translateZ(0);
-    will-change: transform;
-    backface-visibility: hidden;
-  }
-  
-  /* Main scroll container GPU layer */
-  .main-scroll-container {
-    transform: translateZ(0);
-    will-change: scroll-position;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  .disable-backdrop-filter,
-  .is-scrolling .glass-blur,
-  .is-scrolling [class*="backdrop-blur"] {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
-  .glass-hover {
-    @apply hover:bg-white/10 hover:border-white/15 transition-all duration-200;
-  }
-  .glow-accent {
-    @apply shadow-glow;
-  }
-  .glow-success {
-    @apply shadow-glow-success;
-  }
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-  .safe-top {
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-  
-  /* Mobile-friendly improvements */
-  .min-touch-target {
-    min-height: 44px;
-    min-width: 44px;
-  }
-  
-  /* Prevent zoom on focus for inputs on mobile */
-  @media screen and (max-width: 768px) {
-    input[type="text"],
-    input[type="email"],
-    input[type="password"],
-    textarea,
-    select {
-      font-size: 16px !important;
-    }
-  }
-  
-  /* Better tap targets on mobile */
-  @media (hover: none) and (pointer: coarse) {
-    button, 
-    [role="button"],
-    a {
-      min-height: 44px;
-      min-width: 44px;
-    }
-  }
-  
-  /* Prevent text overflow on mobile */
-  .mobile-text-fix {
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    hyphens: auto;
+  50% {
+    box-shadow: 0 0 40px 5px var(--habit-color), 0 0 60px 10px var(--habit-color); /* 5px and 10px positive spread */
   }
 }
 
-@layer components {
-  .bento-card {
-    @apply glass rounded-2xl p-4 glass-hover min-h-[120px];
+/* Breathing Glow for 100% completion - positive spread values */
+.habit-card-advanced.breathing {
+  animation: breathe 2s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% {
+    opacity: 0.5;
+    box-shadow: 0 0 20px 2px var(--habit-color);
   }
-  .btn-primary {
-    @apply bg-accent/20 text-accent border border-accent/30 rounded-xl px-4 py-2.5 
-           font-medium transition-all duration-200 active:scale-95 hover:bg-accent/30 hover:shadow-glow;
-  }
-  .btn-danger {
-    @apply bg-danger/20 text-danger border border-danger/30 rounded-xl px-4 py-2.5 
-             font-medium transition-all duration-200 active:scale-95 hover:bg-danger/30;
-  }
-  .fab-glow {
-    @apply shadow-glow-lg hover:shadow-glow transition-shadow duration-300;
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 40px 5px var(--habit-color), 0 0 60px 10px rgba(var(--habit-color-rgb), 0.3); /* 5px and 10px positive spread */
   }
 }

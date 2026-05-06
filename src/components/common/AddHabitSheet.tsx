@@ -122,43 +122,51 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className="fixed inset-0 z-50 flex items-end lg:items-center justify-center pointer-events-none"
           >
-            <div className="w-full lg:max-w-lg bg-surface border border-white/10 rounded-t-3xl lg:rounded-3xl max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto shadow-2xl">
-              <div className="shrink-0 bg-surface/80 backdrop-blur-md px-5 pt-4 pb-3 border-b border-white/5">
+            <div className="w-full lg:max-w-lg bg-surface border border-foreground/10 rounded-t-3xl lg:rounded-3xl max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto shadow-2xl">
+              <div className="shrink-0 bg-surface/80 backdrop-blur-md px-5 pt-4 pb-3 border-b border-foreground/5">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold text-white">
+                  <h2 className="text-lg font-bold text-foreground">
                     {editHabit ? 'Edit Habit' : 'New Habit'}
                   </h2>
-                  <button onClick={onClose} className="min-h-[44px] min-w-[44px] rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-                    <X className="w-5 h-5 text-white/60" />
+                  <button onClick={onClose} className="min-h-[44px] min-w-[44px] rounded-lg bg-foreground/5 flex items-center justify-center hover:bg-foreground/10 transition-colors">
+                    <X className="w-5 h-5 opacity-60" />
                   </button>
                 </div>
               </div>
 
               <div className="overflow-y-auto flex-1 p-5 space-y-5">
                 <div>
-                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 block">Name</label>
+                  <label className="text-xs font-medium text-foreground/50 uppercase tracking-wider mb-2 block">Name</label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="e.g., Morning Meditation"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
+                    className="w-full border border-foreground/20 rounded-xl px-4 py-3 text-sm placeholder:text-foreground/30 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all font-semibold"
+                    style={{ 
+                      backgroundColor: 'rgba(var(--foreground-rgb), 0.05)',
+                      color: 'var(--foreground)'
+                    }}
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 block">Description</label>
+                  <label className="text-xs font-medium text-foreground/50 uppercase tracking-wider mb-2 block">Description</label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Why is this habit important?"
                     rows={2}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all resize-none"
+                    className="w-full border border-foreground/20 rounded-xl px-4 py-3 text-sm placeholder:text-foreground/30 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all resize-none font-medium"
+                    style={{ 
+                      backgroundColor: 'rgba(var(--foreground-rgb), 0.05)',
+                      color: 'var(--foreground)'
+                    }}
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 block">Category</label>
+                  <label className="text-xs font-medium text-foreground/50 uppercase tracking-wider mb-2 block">Category</label>
                   <div className="flex flex-wrap gap-2">
                     {CATEGORIES.map((cat) => (
                       <button
@@ -167,7 +175,7 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                           category === cat.name
                             ? 'border'
-                            : 'border border-white/10 bg-white/5 text-white/50'
+                            : 'border border-foreground/10 bg-foreground/5 opacity-50'
                         }`}
                         style={category === cat.name ? { borderColor: cat.color, color: cat.color, backgroundColor: `${cat.color}15` } : {}}
                       >
@@ -178,7 +186,7 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 block">Frequency</label>
+                  <label className="text-xs font-medium text-foreground/50 uppercase tracking-wider mb-2 block">Frequency</label>
                   <div className="flex gap-2">
                     {(['daily', 'weekly'] as const).map((freq) => (
                       <button
@@ -187,7 +195,7 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
                         className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
                           frequency === freq
                             ? 'bg-accent/20 border border-accent/40 text-accent'
-                            : 'bg-white/5 border border-white/10 text-white/50'
+                            : 'bg-foreground/5 border border-foreground/10 opacity-50'
                         }`}
                       >
                         {freq.charAt(0).toUpperCase() + freq.slice(1)}
@@ -197,39 +205,39 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 block">Focus Habit</label>
+                  <label className="text-xs font-medium text-foreground/50 uppercase tracking-wider mb-2 block">Focus Habit</label>
                   <button
                     type="button"
                     onClick={() => setIsFocusHabit(!isFocusHabit)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
                       isFocusHabit
                         ? 'border-accent/30 bg-accent/10'
-                        : 'border-white/10 bg-white/5'
+                        : 'border-foreground/10 bg-foreground/5'
                     }`}
                   >
-                    <Timer className={`w-5 h-5 ${isFocusHabit ? 'text-accent' : 'text-white/30'}`} />
+                    <Timer className={`w-5 h-5 ${isFocusHabit ? 'text-accent' : 'text-foreground/30'}`} />
                     <div className="text-left">
-                      <p className={`text-sm font-medium ${isFocusHabit ? 'text-accent' : 'text-white/60'}`}>Enable Pomodoro Timer</p>
-                      <p className="text-xs text-white/30">Complete a 25-min session to check off</p>
+                      <p className={`text-sm font-medium ${isFocusHabit ? 'text-accent' : 'text-foreground/60'}`}>Enable Pomodoro Timer</p>
+                      <p className="text-xs text-foreground/30">Complete a 25-min session to check off</p>
                     </div>
                   </button>
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 block">Count Tracking</label>
+                  <label className="text-xs font-medium text-foreground/50 uppercase tracking-wider mb-2 block">Count Tracking</label>
                   <button
                     type="button"
                     onClick={() => setEnableCountTracking(!enableCountTracking)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
                       enableCountTracking
                         ? 'border-accent/30 bg-accent/10'
-                        : 'border-white/10 bg-white/5'
+                        : 'border-foreground/10 bg-foreground/5'
                     }`}
                   >
-                    <Target className={`w-5 h-5 ${enableCountTracking ? 'text-accent' : 'text-white/30'}`} />
+                    <Target className={`w-5 h-5 ${enableCountTracking ? 'text-accent' : 'text-foreground/30'}`} />
                     <div className="text-left flex-1">
-                      <p className={`text-sm font-medium ${enableCountTracking ? 'text-accent' : 'text-white/60'}`}>Enable Count Tracking</p>
-                      <p className="text-xs text-white/30">Track multiple completions per day</p>
+                      <p className={`text-sm font-medium ${enableCountTracking ? 'text-accent' : 'text-foreground/60'}`}>Enable Count Tracking</p>
+                      <p className="text-xs text-foreground/30">Track multiple completions per day</p>
                     </div>
                   </button>
 
@@ -240,33 +248,33 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="mt-3 flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10">
+                      <div className="mt-3 flex items-center gap-3 px-4 py-3 rounded-xl bg-foreground/10 border border-foreground/10">
                         <Target className="w-5 h-5 text-accent shrink-0" />
                         <div className="flex-1">
-                          <label className="text-xs text-white/40">Target Count</label>
+                          <label className="text-xs text-foreground/40">Target Count</label>
                           <input
                             type="number"
                             min="2"
                             max="100"
                             value={targetCount}
                             onChange={(e) => setTargetCount(Math.max(2, parseInt(e.target.value) || 2))}
-                            className="w-full bg-transparent text-white text-sm font-medium focus:outline-none"
+                            className="w-full bg-transparent text-foreground text-sm font-medium focus:outline-none"
                           />
                         </div>
-                        <span className="text-xs text-white/40">per day</span>
+                        <span className="text-xs text-foreground/40">per day</span>
                       </div>
                     </motion.div>
                   )}
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 block">Color</label>
+                  <label className="text-xs font-medium text-foreground/50 uppercase tracking-wider mb-2 block">Color</label>
                   <div className="flex flex-wrap gap-2">
                     {HABIT_COLORS.map((c) => (
                       <button
                         key={c}
                         onClick={() => setColor(c)}
-                        className={`w-8 h-8 rounded-lg transition-all ${color === c ? 'ring-2 ring-white ring-offset-2 ring-offset-surface scale-110' : 'opacity-60 hover:opacity-100'}`}
+                        className={`w-8 h-8 rounded-lg transition-all ${color === c ? 'ring-2 ring-foreground ring-offset-2 ring-offset-surface scale-110' : 'opacity-60 hover:opacity-100'}`}
                         style={{ backgroundColor: c }}
                       />
                     ))}
@@ -274,7 +282,7 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 block">Icon</label>
+                  <label className="text-xs font-medium text-foreground/50 uppercase tracking-wider mb-2 block">Icon</label>
                   <div className="flex flex-wrap gap-2">
                     {HABIT_ICONS.map((ic) => {
                       const IconComp = iconMap[ic];
@@ -286,9 +294,9 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
                           className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
                             icon === ic
                               ? 'bg-accent/20 border border-accent/40'
-                              : 'bg-white/5 border border-white/10'
+                              : 'bg-foreground/5 border border-foreground/10'
                           }`}
-                          style={icon === ic ? { color } : { color: 'rgba(255,255,255,0.4)' }}
+                          style={icon === ic ? { color } : { opacity: 0.4 }}
                         >
                           <IconComp className="w-5 h-5" />
                         </button>
@@ -298,7 +306,7 @@ export function AddHabitSheet({ isOpen, onClose, editHabit }: AddHabitSheetProps
                 </div>
               </div>
 
-              <div className="shrink-0 px-5 pb-5 pt-3 border-t border-white/5">
+              <div className="shrink-0 px-5 pb-5 pt-3 border-t border-foreground/5">
                 <button
                   onClick={handleSubmit}
                   disabled={!title.trim()}

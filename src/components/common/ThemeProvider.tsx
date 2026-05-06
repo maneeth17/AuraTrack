@@ -21,15 +21,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const root = document.documentElement;
-
-    root.classList.remove('theme-cyberpunk', 'theme-cinematic');
-
-    if (level >= 10) {
-      root.classList.add('theme-cinematic');
-    } else if (level >= 5) {
-      root.classList.add('theme-cyberpunk');
-    }
+    // Level-based themes are now manually selectable in Settings once unlocked.
+    // We only handle performance class toggling here.
   }, [level]);
 
   useEffect(() => {

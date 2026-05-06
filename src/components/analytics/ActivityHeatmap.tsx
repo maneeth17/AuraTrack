@@ -41,15 +41,22 @@ export function ActivityHeatmap() {
     return Math.min(4, Math.ceil((count / maxCount) * 4));
   }
 
-  function getColor(intensity: number): string {
-    const colors = [
-      'bg-white/[0.03]',
-      'bg-accent/20',
-      'bg-accent/40',
-      'bg-accent/60',
-      'bg-accent',
-    ];
-    return colors[intensity];
+   // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   function getColor(_intensity: number): string {
+    return '';
+  }
+
+  function getStyle(intensity: number): React.CSSProperties {
+    if (intensity === 0) {
+      return { backgroundColor: 'rgba(var(--foreground-rgb, 255, 255, 255), 0.08)' };
+    }
+    // For premium themes, we use the accent color with increasing opacity
+    const baseOpacity = 0.2;
+    const opacity = baseOpacity + (intensity * 0.2);
+    return { 
+      backgroundColor: `rgba(var(--accent-rgb, 129, 140, 248), ${opacity})`,
+      boxShadow: intensity > 2 ? `0 0 8px rgba(var(--accent-rgb, 129, 140, 248), 0.3)` : 'none'
+    };
   }
 
   const weeks: { date: string; intensity: number }[][] = [];
@@ -79,18 +86,19 @@ export function ActivityHeatmap() {
             {week.map((day, di) => (
               <div
                 key={`${wi}-${di}`}
-                className={`w-[11px] h-[11px] rounded-sm ${getColor(day.intensity)} transition-colors`}
+                className="w-[11px] h-[11px] rounded-sm transition-colors"
+                style={getStyle(day.intensity)}
                 title={`${day.date}: ${day.intensity > 0 ? `${Math.round((day.intensity / 4) * 100)}%` : 'No activity'}`}
               />
             ))}
           </div>
         ))}
       </div>
-      <div className="flex items-center justify-between mt-2 text-[0.6rem] text-white/30">
+      <div className="flex items-center justify-between mt-2 text-[0.6rem] text-foreground/30">
         <span>Less</span>
         <div className="flex gap-[3px]">
           {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className={`w-[11px] h-[11px] rounded-sm ${getColor(i)}`} />
+            <div key={i} className="w-[11px] h-[11px] rounded-sm" style={getStyle(i)} />
           ))}
         </div>
         <span>More</span>

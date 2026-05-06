@@ -64,6 +64,8 @@ export interface HabitStore {
     longBreak: number;
     enabled: boolean;
   };
+  hasHydrated: boolean;
+  setHasHydrated: (val: boolean) => void;
 }
 
 export function getXPForLevel(level: number): number {

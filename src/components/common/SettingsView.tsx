@@ -5,13 +5,14 @@ import { Download, Upload, Trash2, Info, LogOut, Share2, Copy, Check } from 'luc
 import { useHabitStore } from '@/store/useHabitStore';
 import { signOut } from 'next-auth/react';
 import { useShallow } from 'zustand/react/shallow';
+import { useAura } from '@/hooks/useAura';
 
 export function SettingsView() {
   const [exportData, importData, resetAll] = useHabitStore(
     useShallow((s) => [s.exportData, s.importData, s.resetAll])
   );
-  const [habitCount, logCount] = useHabitStore(
-    useShallow((s) => [s.habits.length, s.logs.length])
+  const [habitCount, logCount, level] = useHabitStore(
+    useShallow((s) => [s.habits.length, s.logs.length, s.level])
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -20,6 +21,8 @@ export function SettingsView() {
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState('');
   const [shareError, setShareError] = useState<string | null>(null);
+
+  const { themePreference, setThemePreference } = useAura();
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -105,11 +108,11 @@ export function SettingsView() {
 
   return (
     <div className="space-y-6 pb-8 lg:pb-4">
-      <h2 className="text-2xl font-bold text-white">Settings</h2>
+      <h2 className="text-2xl font-bold text-foreground">Settings</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bento-card">
-          <h3 className="text-sm font-semibold text-white/80 mb-4">Data Management</h3>
+          <h3 className="text-sm font-semibold text-foreground/80 mb-4">Data Management</h3>
           <div className="space-y-3">
             <button
               onClick={handleExport}
@@ -117,8 +120,8 @@ export function SettingsView() {
             >
               <Download className="w-5 h-5 text-accent shrink-0" />
               <div>
-                <p className="text-sm text-white/80 font-medium">Export Data</p>
-                <p className="text-xs text-white/40">Download JSON backup</p>
+                <p className="text-sm text-foreground/80 font-medium">Export Data</p>
+                <p className="text-xs text-foreground/40">Download JSON backup</p>
               </div>
             </button>
 
@@ -128,8 +131,8 @@ export function SettingsView() {
             >
               <Upload className="w-5 h-5 text-success shrink-0" />
               <div>
-                <p className="text-sm text-white/80 font-medium">Import Data</p>
-                <p className="text-xs text-white/40">Restore from JSON</p>
+                <p className="text-sm text-foreground/80 font-medium">Import Data</p>
+                <p className="text-xs text-foreground/40">Restore from JSON</p>
               </div>
             </button>
             <input
@@ -154,14 +157,14 @@ export function SettingsView() {
               <Trash2 className="w-5 h-5 text-danger shrink-0" />
               <div>
                 <p className="text-sm text-danger font-medium">Reset All Data</p>
-                <p className="text-xs text-white/40">Delete all habits and logs</p>
+                <p className="text-xs text-foreground/40">Delete all habits and logs</p>
               </div>
             </button>
           </div>
         </div>
 
         <div className="bento-card">
-          <h3 className="text-sm font-semibold text-white/80 mb-4">Share Progress</h3>
+          <h3 className="text-sm font-semibold text-foreground/80 mb-4">Share Progress</h3>
           {shareError && (
             <p className="text-xs text-danger mb-3">{shareError}</p>
           )}
@@ -174,8 +177,8 @@ export function SettingsView() {
               >
                 <Share2 className="w-5 h-5 text-accent shrink-0" />
                 <div>
-                  <p className="text-sm text-white/80 font-medium">{shareLoading ? 'Generating...' : 'Create Share Link'}</p>
-                  <p className="text-xs text-white/40">Share your habits publicly</p>
+                  <p className="text-sm text-foreground/80 font-medium">{shareLoading ? 'Generating...' : 'Create Share Link'}</p>
+                  <p className="text-xs text-foreground/40">Share your habits publicly</p>
                 </div>
               </button>
             ) : (
@@ -190,8 +193,8 @@ export function SettingsView() {
                     <Copy className="w-5 h-5 text-accent shrink-0" />
                   )}
                   <div>
-                    <p className="text-sm text-white/80 font-medium">{copied ? 'Copied!' : 'Copy Link'}</p>
-                    <p className="text-xs text-white/40 truncate">{origin}/share/{shareId}</p>
+                    <p className="text-sm text-foreground/80 font-medium">{copied ? 'Copied!' : 'Copy Link'}</p>
+                    <p className="text-xs text-foreground/40 truncate">{origin}/share/{shareId}</p>
                   </div>
                 </button>
                 <button
@@ -199,10 +202,10 @@ export function SettingsView() {
                   disabled={shareLoading}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/8 transition-all text-left disabled:opacity-50"
                 >
-                  <Share2 className="w-5 h-5 text-white/40 shrink-0" />
+                  <Share2 className="w-5 h-5 text-foreground/40 shrink-0" />
                   <div>
-                    <p className="text-sm text-white/80 font-medium">{shareLoading ? 'Refreshing...' : 'Regenerate Link'}</p>
-                    <p className="text-xs text-white/40">Create a new share ID</p>
+                    <p className="text-sm text-foreground/80 font-medium">{shareLoading ? 'Refreshing...' : 'Regenerate Link'}</p>
+                    <p className="text-xs text-foreground/40">Create a new share ID</p>
                   </div>
                 </button>
               </>
@@ -211,29 +214,63 @@ export function SettingsView() {
         </div>
 
         <div className="bento-card">
-          <h3 className="text-sm font-semibold text-white/80 mb-4">About</h3>
+          <h3 className="text-sm font-semibold text-foreground/80 mb-4">About</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between py-2 border-b border-white/5">
               <div className="flex items-center gap-2">
-                <Info className="w-4 h-4 text-white/30" />
-                <span className="text-sm text-white/50">Version</span>
+                <Info className="w-4 h-4 text-foreground/30" />
+                <span className="text-sm text-foreground/50">Version</span>
               </div>
-              <span className="text-sm text-white/30 font-mono">1.0.0</span>
+              <span className="text-sm text-foreground/30 font-mono">1.0.0</span>
             </div>
             <div className="flex items-center justify-between py-2 border-b border-white/5">
               <div className="flex items-center gap-2">
-                <Info className="w-4 h-4 text-white/30" />
-                <span className="text-sm text-white/50">Habits</span>
+                <Info className="w-4 h-4 text-foreground/30" />
+                <span className="text-sm text-foreground/50">Habits</span>
               </div>
-              <span className="text-sm text-white/30 font-mono">{habitCount}</span>
+              <span className="text-sm text-foreground/30 font-mono">{habitCount}</span>
             </div>
             <div className="flex items-center justify-between py-2">
               <div className="flex items-center gap-2">
-                <Info className="w-4 h-4 text-white/30" />
-                <span className="text-sm text-white/50">Total Logs</span>
+                <Info className="w-4 h-4 text-foreground/30" />
+                <span className="text-sm text-foreground/50">Total Logs</span>
               </div>
-              <span className="text-sm text-white/30 font-mono">{logCount}</span>
+              <span className="text-sm text-foreground/30 font-mono">{logCount}</span>
             </div>
+          </div>
+        </div>
+
+        <div className="bento-card">
+          <h3 className="text-sm font-semibold text-foreground/80 mb-4">Aura Theme Override</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { id: 'auto', label: 'Auto', desc: 'Syncs with time', icon: '✨' },
+              { id: 'dawn', label: 'Dawn', desc: '5AM - 10AM', icon: '🌅' },
+              { id: 'focus', label: 'Focus', desc: '10AM - 8PM', icon: '⚡' },
+              { id: 'midnight', label: 'Midnight', desc: '8PM - 5AM', icon: '🌙' },
+              ...(level >= 5 ? [{ id: 'cyberpunk', label: 'Cyberpunk', desc: 'Lvl 5 Unlocked', icon: '🧬' }] : []),
+              ...(level >= 10 ? [{ id: 'cinematic', label: 'Cinematic', desc: 'Lvl 10 Unlocked', icon: '🎬' }] : []),
+            ].map((theme) => {
+              const isActive = themePreference === theme.id;
+              // To use useAura, I need to call it inside the component. Wait, I haven't called it! I need another chunk.
+              return (
+                <button
+                  key={theme.id}
+                  onClick={() => setThemePreference(theme.id as any)}
+                  className={`flex flex-col items-start p-3 rounded-xl border transition-all text-left ${
+                    isActive 
+                      ? 'bg-accent/20 border-accent/50 shadow-[0_0_15px_rgba(var(--aura-primary-rgb),0.3)]' 
+                      : 'bg-white/5 border-white/10 hover:bg-white/10'
+                  }`}
+                >
+                  <span className="text-lg mb-1">{theme.icon}</span>
+                  <span className={`text-sm font-semibold ${isActive ? 'text-accent' : 'text-foreground/80'}`}>
+                    {theme.label}
+                  </span>
+                  <span className="text-xs text-foreground/40">{theme.desc}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -249,7 +286,7 @@ export function SettingsView() {
           <LogOut className="w-5 h-5 text-danger shrink-0" />
           <div className="text-left">
             <p className="text-sm text-danger font-medium">Sign Out</p>
-            <p className="text-xs text-white/40">Your data is saved in the cloud</p>
+            <p className="text-xs text-foreground/40">Your data is saved in the cloud</p>
           </div>
         </button>
       </div>

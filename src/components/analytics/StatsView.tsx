@@ -78,10 +78,10 @@ export function StatsView() {
   const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<Record<string, unknown>>; label?: string }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-[#1e293b] border border-white/10 rounded-xl p-3 shadow-xl">
-          <p className="text-white/60 text-xs mb-1">{label}</p>
+        <div className="bg-surface border border-foreground/10 rounded-xl p-3 shadow-xl">
+          <p className="text-foreground/60 text-xs mb-1">{label}</p>
           <p className="text-accent font-bold text-lg">
-            {String(payload[0].value)} <span className="text-sm font-normal text-white/80">habits completed</span>
+            {String(payload[0].value)} <span className="text-sm font-normal text-foreground/80">habits completed</span>
           </p>
         </div>
       );
@@ -92,58 +92,62 @@ export function StatsView() {
   return (
     <div className="space-y-6 pb-8 lg:pb-4 main-scroll-container">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Analytics</h2>
+        <h2 className="text-2xl font-bold text-foreground">Analytics</h2>
       </div>
 
       {/* Clean Overview Cards */}
       <div className="grid grid-cols-3 gap-3 md:gap-4">
-        <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
+        <div className="bg-foreground/5 border border-foreground/5 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
           <Target className="w-5 h-5 text-accent mb-2" />
-          <span className="text-2xl font-bold text-white">{habits.length}</span>
-          <span className="text-[0.65rem] text-white/40 uppercase tracking-wider mt-1">Active</span>
+          <span className="text-2xl font-bold text-foreground">{habits.length}</span>
+          <span className="text-[0.65rem] text-foreground/40 uppercase tracking-wider mt-1">Active</span>
         </div>
-        <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
+        <div className="bg-foreground/5 border border-foreground/5 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
           <Award className="w-5 h-5 text-success mb-2" />
           <span className="text-2xl font-bold text-success">{stats.avgConsistency}%</span>
-          <span className="text-[0.65rem] text-white/40 uppercase tracking-wider mt-1">Consistency</span>
+          <span className="text-[0.65rem] text-foreground/40 uppercase tracking-wider mt-1">Consistency</span>
         </div>
-        <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
+        <div className="bg-foreground/5 border border-foreground/5 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
           <Flame className="w-5 h-5 text-warning mb-2" />
           <span className="text-2xl font-bold text-warning">{stats.bestStreak}</span>
-          <span className="text-[0.65rem] text-white/40 uppercase tracking-wider mt-1">Best Streak</span>
+          <span className="text-[0.65rem] text-foreground/40 uppercase tracking-wider mt-1">Best Streak</span>
         </div>
       </div>
 
       {/* Interactive Trend Chart */}
       <div className="bento-card p-5">
-        <h3 className="text-sm font-semibold text-white/80 mb-6">Completion Trend (14 Days)</h3>
+        <h3 className="text-sm font-semibold text-foreground/80 mb-6">Completion Trend (14 Days)</h3>
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={trendData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--foreground)" strokeOpacity={0.1} vertical={false} />
               <XAxis 
                 dataKey="date" 
-                stroke="rgba(255,255,255,0.2)" 
+                stroke="var(--foreground)"
+                strokeOpacity={0.3}
                 fontSize={10} 
                 tickLine={false}
                 axisLine={false}
                 dy={10}
+                tick={{ fill: 'var(--foreground)', opacity: 0.6 }}
               />
               <YAxis 
-                stroke="rgba(255,255,255,0.2)" 
+                stroke="var(--foreground)"
+                strokeOpacity={0.3}
                 fontSize={10}
                 tickLine={false}
                 axisLine={false}
                 allowDecimals={false}
+                tick={{ fill: 'var(--foreground)', opacity: 0.6 }}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2 }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--foreground)', strokeOpacity: 0.1, strokeWidth: 2 }} />
               <Line 
                 type="monotone" 
                 dataKey="completed" 
-                stroke="#818cf8" 
+                stroke="var(--accent)" 
                 strokeWidth={3}
-                dot={{ r: 4, fill: '#1e293b', stroke: '#818cf8', strokeWidth: 2 }}
-                activeDot={{ r: 6, fill: '#818cf8', stroke: '#fff', strokeWidth: 2 }}
+                dot={{ r: 4, fill: 'var(--background)', stroke: 'var(--accent)', strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: 'var(--accent)', stroke: 'var(--foreground)', strokeWidth: 2 }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -153,7 +157,7 @@ export function StatsView() {
       {/* Interactive Donut Chart */}
       {categoryData.length > 0 && (
         <div className="bento-card p-5">
-          <h3 className="text-sm font-semibold text-white/80 mb-2">Focus Areas</h3>
+          <h3 className="text-sm font-semibold text-foreground/80 mb-2">Focus Areas</h3>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -172,14 +176,15 @@ export function StatsView() {
                   ))}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#1e293b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
-                  itemStyle={{ color: '#fff' }}
+                  contentStyle={{ backgroundColor: 'var(--surface)', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)' }}
+                  itemStyle={{ color: 'var(--foreground)' }}
+                  labelStyle={{ color: 'var(--foreground)' }}
                 />
                 <Legend 
                   verticalAlign="bottom" 
                   height={36}
                   iconType="circle"
-                  wrapperStyle={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}
+                  wrapperStyle={{ fontSize: '12px', color: 'var(--foreground)', opacity: 0.6 }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -189,7 +194,7 @@ export function StatsView() {
 
       {/* Activity Heatmap (Refined spacing) */}
       <div className="bento-card p-5">
-        <h3 className="text-sm font-semibold text-white/80 mb-4">Consistency Heatmap</h3>
+        <h3 className="text-sm font-semibold text-foreground/80 mb-4">Consistency Heatmap</h3>
         <div className="overflow-hidden">
           <ActivityHeatmap />
         </div>

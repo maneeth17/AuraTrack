@@ -1,18 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Sparkles } from 'lucide-react';
 import { useHabitStore } from '@/store/useHabitStore';
+import { useShallow } from 'zustand/react/shallow';
 import confetti from 'canvas-confetti';
 
 export function LevelUpOverlay() {
-  const level = useHabitStore((s) => s.level);
+  const [level, hasHydrated] = useHabitStore(useShallow((s) => [s.level, s.hasHydrated]));
   const [show, setShow] = useState(false);
-  const [prevLevel, setPrevLevel] = useState(level);
+  const prevLevelRef = useRef(level);
 
   useEffect(() => {
-    if (level > prevLevel && prevLevel > 0) {
+    if (!hasHydrated) {
+      prevLevelRef.current = level;
+      return;
+    }
+
+    if (level > prevLevelRef.current && prevLevelRef.current > 0) {
       setShow(true);
       confetti({
         particleCount: 100,
@@ -22,11 +28,15 @@ export function LevelUpOverlay() {
       });
 
       const timer = setTimeout(() => setShow(false), 3000);
-      setPrevLevel(level);
+      prevLevelRef.current = level;
       return () => clearTimeout(timer);
     }
-    setPrevLevel(level);
-  }, [level, prevLevel]);
+    prevLevelRef.current = level;
+  }, [level, hasHydrated]);
+
+  const handleDismiss = () => {
+    setShow(false);
+  };
 
   return (
     <AnimatePresence>
@@ -35,7 +45,8 @@ export function LevelUpOverlay() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 safe-top safe-bottom"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 safe-top safe-bottom cursor-pointer"
+          onClick={handleDismiss}
         >
           <motion.div
             initial={{ scale: 0.5, opacity: 0 }}
@@ -43,6 +54,7 @@ export function LevelUpOverlay() {
             exit={{ scale: 1.5, opacity: 0 }}
             transition={{ type: 'spring', damping: 15 }}
             className="text-center w-full max-w-sm mx-auto"
+            onClick={(e) => e.stopPropagation()}
           >
             <motion.div
               animate={{ rotate: 360 }}
@@ -55,7 +67,7 @@ export function LevelUpOverlay() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="text-4xl sm:text-5xl font-bold text-white mb-2"
+              className="text-4xl sm:text-5xl font-bold text-foreground mb-2"
             >
               Level {level}
             </motion.p>
@@ -63,10 +75,18 @@ export function LevelUpOverlay() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4 }}
-              className="text-base sm:text-lg text-white/60 flex items-center justify-center gap-2"
+              className="text-base sm:text-lg text-foreground/60 flex items-center justify-center gap-2"
             >
               <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
               Level Up!
+            </motion.p>
+            <motion.p
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="text-sm text-foreground/40 mt-4"
+            >
+              Tap anywhere to continue
             </motion.p>
           </motion.div>
         </motion.div>
