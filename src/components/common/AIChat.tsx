@@ -60,7 +60,7 @@ export function AIChat() {
     <>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-4 right-4 z-50 w-12 h-12 rounded-full bg-accent flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+        className="fixed bottom-24 right-4 lg:bottom-4 lg:right-4 z-50 w-12 h-12 rounded-full bg-accent flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
       >
         <MessageSquare className="w-6 h-6 text-foreground" />
       </button>
