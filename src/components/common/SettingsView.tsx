@@ -256,7 +256,7 @@ export function SettingsView() {
               return (
                 <button
                   key={theme.id}
-                  onClick={() => setThemePreference(theme.id as any)}
+                  onClick={() => setThemePreference(theme.id as 'auto' | 'dawn' | 'focus' | 'midnight' | 'cyberpunk' | 'cinematic')}
                   className={`flex flex-col items-start p-3 rounded-xl border transition-all text-left ${
                     isActive 
                       ? 'bg-accent/20 border-accent/50 shadow-[0_0_15px_rgba(var(--aura-primary-rgb),0.3)]' 
